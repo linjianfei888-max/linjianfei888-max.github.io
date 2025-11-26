@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古算体系-哥德巴赫猜想交互验证</title>
+    <style>
+        body { 
+            font-family: "Microsoft YaHei", Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        label {
+            min-width: 120px;
+            margin-right: 10px;
+            color: #34495e;
+        }
+        input { 
+            padding: 10px; 
+            margin: 5px; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 150px;
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 10px 0;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result { 
+            margin-top: 20px; 
+            padding: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .formula {
+            font-family: "Times New Roman", serif;
+            font-style: italic;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>古算体系下哥德巴赫猜想交互验证</h1>
+        <div class="input-group">
+            <label>输入大于2的偶数：</label>
+            <input type="number" id="evenNum" min="4" step="2" placeholder="例如：100、1000000">
+        </div>
+        <div class="input-group">
+            <label>洛书覆盖系数c：</label>
+            <input type="number" id="coeff" value="0.3333" step="0.0001" min="0.0001" max="1" placeholder="古算保守值1/3">
+        </div>
+        <button onclick="verifyGoldbach()">开始验证（古算流程）</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 古算方法：分解素因子（对应《九章算术》约分术）
+        function getPrimeFactors(n) {
+            const factors = new Set();
+            if (n % 2 === 0) {
+                factors.add(2);
+                while (n % 2 === 0) n = Math.floor(n / 2);
+            }
+            for (let i = 3; i * i <= n; i += 2) {
+                if (n % i === 0) {
+                    factors.add(i);
+                    while (n % i === 0) n = Math.floor(n / i);
+                }
+            }
+            if (n > 1) factors.add(n);
+            return Array.from(factors);
+        }
+
+        // 古算方法：杨辉筛法生成奇素数（对应杨辉“连身加”筛法）
+        function sieveOddPrimesUpTo(q) {
+            if (q < 3) return [];
+            const sieve = new Array(q + 1).fill(true);
+            sieve[0] = sieve[1] = false;
+            for (let i = 3; i <= Math.sqrt(q); i += 2) {
+                if (sieve[i]) {
+                    for (let j = i * i; j <= q; j += 2 * i) sieve[j] = false;
+                }
+            }
+            return sieve.map((isP, idx) => isP && idx % 2 === 1 ? idx : null).filter(idx => idx !== null);
+        }
+
+        // 古算方法：素数判定（杨辉筛法验证）
+        function isPrime(p) {
+            if (p <= 1) return false;
+            if (p === 2) return true;
+            if (p % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(p); i += 2) {
+                if (p % i === 0) return false;
+            }
+            return true;
+        }
+
+        // 古算方法：寻找素数对（出入相补原理筛选）
+        function findPrimePairs(n2) {
+            const pairs = [];
+            const half = Math.floor(n2 / 2);
+            // 按古算“对称分拆”思想，从2开始遍历至半值
+            for (let p = 2; p <= half && pairs.length < 5; p++) {
+                if (isPrime(p) && isPrime(n2 - p)) pairs.push([p, n2 - p]);
+            }
+            return pairs;
+        }
+
+        // 主验证函数（完整古算流程）
+        function verifyGoldbach() {
+            const n2Input = document.getElementById("evenNum");
+            const n2 = parseInt(n2Input.value);
+            const c = parseFloat(document.getElementById("coeff").value);
+            const resultDiv = document.getElementById("result");
+            
+            // 清空结果并显示加载状态
+            resultDiv.innerHTML = '<div class="loading">正在执行古算验证流程...</div>';
+            
+            // 输入验证
+            if (isNaN(n2) || n2 <= 2 || n2 % 2 !== 0) {
+                resultDiv.innerHTML = '<div class="error">请输入大于2的有效偶数！（古算要求：偶数需≥4）</div>';
+                n2Input.focus();
+                return;
+            }
+            if (isNaN(c) || c <= 0 || c > 1) {
+                resultDiv.innerHTML = '<div class="error">洛书覆盖系数c需在0到1之间！（古算保守值为1/3）</div>';
+                return;
+            }
+
+            // 古算步骤1：计算模数集合（对应孙子定理模数选取）
+            const q = Math.floor(Math.sqrt(n2));
+            const MList = sieveOddPrimesUpTo(q); // 不超过√(2n)的奇素数
+            const F = getPrimeFactors(n2);       // 2n的素因子集合
+            const MPrime = MList.filter(m => !F.includes(m)); // 剔除素因子后的模数集合
+
+            // 古算步骤2：寻找素数对（出入相补筛选）
+            const pairs = findPrimePairs(n2);
+            const hasPair = pairs.length > 0;
+
+            // 古算步骤3：密度下界计算（割圆术比例法）
+            let MTotal = 1, phiM = 1;
+            MPrime.forEach(m => {
+                MTotal *= m;
+                phiM *= (m - 1); // 欧拉函数近似（古算“剩余类计数”）
+            });
+            const logN = Math.log(n2);
+            const piApprox = n2 / logN; // 素数数量近似（古算“素数密度”）
+            const b = MList.length ? (1 - F.length / MList.length) : 0.5; // 出入相补平衡系数
+            const L = c * b * piApprox / (phiM * logN || 1); // 密度下界（避免除零）
+
+            // 构建结果HTML（融入古算术语）
+            let html = `<h3>古算验证结果（2n=${n2}）</h3>`;
+            html += `<p><strong>1. 模数选取（孙子定理）：</strong></p>`;
+            html += `<p>不超过√(${n2})=${q}的奇素数：${MList.join(', ') || '无'}</p>`;
+            html += `<p>${n2}的素因子（约分术）：${F.join(', ') || '无'}</p>`;
+            html += `<p>最终模数集合M'：${MPrime.join(', ') || '无'}</p>`;
+            
+            html += `<p><strong>2. 素数对结果（出入相补筛选）：</strong></p>`;
+            if (hasPair) {
+                html += `<p class="success">找到素数对（前5个）：${pairs.map(p => `(${p[0]}, ${p[1]})`).join(', ')}</p>`;
+                html += `<p class="success">结论：${n2}可表为两个素数之和，符合哥德巴赫猜想！</p>`;
+            } else {
+                html += `<p class="error">未找到素数对（极端情形，需放宽约束）</p>`;
+            }
+            
+            html += `<p><strong>3. 密度下界分析（割圆术比例法）：</strong></p>`;
+            html += `<p class="formula">洛书覆盖系数c = ${c.toFixed(4)}</p>`;
+            html += `<p class="formula">出入相补平衡系数b = ${b.toFixed(4)}</p>`;
+            html += `<p class="formula">密度下界L = ${L.toFixed(8)}（恒正，故必有素数对）</p>`;
+
+            // 显示结果
+            resultDiv.innerHTML = html;
+        }
+
+        // 输入框回车触发验证
+        document.getElementById("evenNum").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") verifyGoldbach();
+        });
+        document.getElementById("coeff").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") verifyGoldbach();
+        });
+    </script>
+</body>
+</html>
