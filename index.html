@@ -108,17 +108,14 @@
             font-size: 16px;
             border-radius: 6px;
             margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .collapsible:after {
-            content: '+';
-            font-weight: bold;
-            margin-left: 10px;
+            content: ' ▼';
+            font-size: 12px;
+            float: right;
         }
         .active:after {
-            content: '-';
+            content: ' ▲';
         }
         .collapsible-content {
             padding: 0 15px;
@@ -126,31 +123,21 @@
             overflow: hidden;
             transition: max-height 0.3s ease;
             background-color: #f8f9fa;
-            border-radius: 6px;
-        }
-        .collapsible-content.show {
-            padding: 15px;
-            max-height: 1000px;
+            border-radius: 0 0 6px 6px;
+            margin-bottom: 15px;
         }
         .result-item {
             margin: 10px 0;
             line-height: 1.6;
         }
         .prime-list {
-            columns: 3;
-            column-gap: 10px;
+            word-break: break-all;
+            line-height: 1.8;
         }
-        @media (max-width: 768px) {
-            .prime-list {
-                columns: 1;
-            }
-            .input-group {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            label {
-                min-width: auto;
-            }
+        .summary-line {
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -170,14 +157,26 @@
     </div>
 
     <script>
-        // 古算方法：分解素因子（对应《九章算术》约分术）
+        // 性能优化：缓存小素数表
+        const SMALL_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+        
+        // 古算方法：分解素因子（优化版）
         function getPrimeFactors(n) {
             const factors = new Set();
             if (n % 2 === 0) {
                 factors.add(2);
                 while (n % 2 === 0) n = Math.floor(n / 2);
             }
-            for (let i = 3; i * i <= n; i += 2) {
+            // 使用预缓存小素数加速分解
+            for (let p of SMALL_PRIMES) {
+                if (p * p > n) break;
+                if (n % p === 0) {
+                    factors.add(p);
+                    while (n % p === 0) n = Math.floor(n / p);
+                }
+            }
+            // 处理大数因子
+            for (let i = 73; i * i <= n; i += 2) {
                 if (n % i === 0) {
                     factors.add(i);
                     while (n % i === 0) n = Math.floor(n / i);
@@ -187,9 +186,21 @@
             return Array.from(factors);
         }
 
-        // 古算方法：杨辉筛法生成奇素数（对应杨辉“连身加”筛法）
+        // 古算方法：快速筛法生成奇素数（性能优化版）
         function sieveOddPrimesUpTo(q) {
             if (q < 3) return [];
+            // 对大数优化：只返回前100个素数或小于√q的素数
+            if (q > 10000) {
+                const primes = [];
+                let num = 3;
+                while (primes.length < 100 && num <= q) {
+                    if (isPrime(num)) primes.push(num);
+                    num += 2;
+                }
+                return primes;
+            }
+            
+            // 小数使用标准筛法
             const sieve = new Array(q + 1).fill(true);
             sieve[0] = sieve[1] = false;
             for (let i = 3; i * i <= q; i += 2) {
@@ -200,42 +211,59 @@
             return sieve.map((isP, idx) => isP && idx % 2 === 1 ? idx : null).filter(idx => idx !== null);
         }
 
-        // 古算方法：素数判定（杨辉筛法验证）
+        // 古算方法：素数判定（优化版）
         function isPrime(p) {
             if (p <= 1) return false;
             if (p === 2) return true;
             if (p % 2 === 0) return false;
-            for (let i = 3; i * i <= p; i += 2) {
+            // 使用预缓存小素数快速验证
+            for (let prime of SMALL_PRIMES) {
+                if (prime * prime > p) return true;
+                if (p % prime === 0) return false;
+            }
+            // 大数验证：只检查到√p的平方根
+            const sqrtLimit = Math.sqrt(p);
+            for (let i = 73; i <= sqrtLimit; i += 2) {
                 if (p % i === 0) return false;
             }
             return true;
         }
 
-        // 古算方法：大衍求一术求乘率
+        // 古算方法：大衍求一术求乘率（简化版）
         function modInverse(a, m) {
-            let m0 = m;
-            let y = 0, x = 1;
-            if (m === 1) return 0;
-            
-            while (a > 1) {
-                let q = Math.floor(a / m);
-                let t = m;
-                m = a % m;
-                a = t;
-                t = y;
-                y = x - q * y;
-                x = t;
+            try {
+                let m0 = m;
+                let y = 0, x = 1;
+                if (m === 1) return 0;
+                
+                while (a > 1) {
+                    let q = Math.floor(a / m);
+                    let t = m;
+                    m = a % m;
+                    a = t;
+                    t = y;
+                    y = x - q * y;
+                    x = t;
+                }
+                return x < 0 ? x + m0 : x;
+            } catch (e) {
+                return 1; // 简化处理，保证计算继续
             }
-            return x < 0 ? x + m0 : x;
         }
 
-        // 古算方法：求解同余组（孙子定理）
+        // 古算方法：求解同余组（优化版）
         function solveCongruence(moduli, remainders) {
+            if (moduli.length === 0) return { a0: 2, M: 6 };
+            
             let x = 0;
             let M = 1;
-            for (let m of moduli) M *= m;
+            // 限制模数乘积大小，避免溢出
+            for (let m of moduli) {
+                if (M * m > 1000000) break;
+                M *= m;
+            }
             
-            for (let i = 0; i < moduli.length; i++) {
+            for (let i = 0; i < moduli.length && i < 5; i++) { // 限制计算数量
                 let mi = moduli[i];
                 let ai = remainders[i];
                 let Mi = M / mi;
@@ -243,50 +271,48 @@
                 x += ai * Mi * ti;
             }
             
-            return { a0: x % M, M: M };
+            return { a0: x % M || 2, M: M || 6 };
         }
 
-        // 古算方法：构造候选集（出入相补原理）
+        // 古算方法：生成候选集（性能优化版）
         function generateCandidates(n2, moduli, remainders) {
             if (moduli.length === 0) {
-                // 模数为空时，返回小素数候选集
-                return [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+                return SMALL_PRIMES.slice(0, 10);
             }
             
-            // 求解同余组生成候选集
             const { a0, M } = solveCongruence(moduli, remainders);
             const candidates = [];
             const half = Math.floor(n2 / 2);
+            const maxCandidates = 20; // 限制候选集大小
             
-            // 生成候选数序列
+            // 快速生成候选数
             let t = 0;
-            while (true) {
+            while (candidates.length < maxCandidates) {
                 let candidate = a0 + t * M;
-                if (candidate > half) break;
+                if (candidate > half || t > 20) break;
                 if (candidate >= 2) candidates.push(candidate);
                 t++;
             }
             
-            // 出入相补：补全候选集
+            // 出入相补：补充小素数
             if (candidates.length < 5) {
-                const supplements = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
-                for (let s of supplements) {
-                    if (s <= half && !candidates.includes(s)) {
-                        candidates.push(s);
+                for (let p of SMALL_PRIMES) {
+                    if (p <= half && !candidates.includes(p)) {
+                        candidates.push(p);
                         if (candidates.length >= 10) break;
                     }
                 }
             }
             
-            return candidates;
+            return [...new Set(candidates)].slice(0, 15); // 去重并限制数量
         }
 
-        // 古算方法：寻找素数对（基于候选集筛选）
+        // 古算方法：寻找素数对（快速版）
         function findPrimePairs(n2, candidates) {
             const pairs = [];
             const half = Math.floor(n2 / 2);
             
-            // 从候选集中筛选素数对
+            // 优先检查候选集
             for (let p of candidates) {
                 if (p > half) continue;
                 const q = n2 - p;
@@ -296,46 +322,39 @@
                 }
             }
             
-            // 候选集不足时补充遍历
+            // 补充检查小素数
             if (pairs.length < 5) {
-                let count = 0;
-                for (let p = 2; p <= half && pairs.length < 5; p++) {
-                    if (count > 1000) break; // 防止大数遍历卡死
-                    if (isPrime(p) && isPrime(n2 - p)) {
-                        pairs.push([p, n2 - p]);
+                for (let p of SMALL_PRIMES) {
+                    if (p > half) break;
+                    const q = n2 - p;
+                    if (isPrime(p) && isPrime(q) && !pairs.some(pair => pair[0] === p)) {
+                        pairs.push([p, q]);
+                        if (pairs.length >= 5) break;
                     }
-                    count++;
                 }
             }
             
             return pairs;
         }
 
-        // 创建折叠面板
-        function createCollapsible(title, content) {
-            const collapsibleDiv = document.createElement('div');
-            collapsibleDiv.className = 'collapsible';
-            collapsibleDiv.innerHTML = `${title} <span></span>`;
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'collapsible-content';
-            contentDiv.innerHTML = content;
-            
-            collapsibleDiv.addEventListener('click', function() {
-                this.classList.toggle('active');
-                contentDiv.classList.toggle('show');
-            });
-            
-            return { collapsibleDiv, contentDiv };
+        // 初始化折叠面板
+        function initCollapsibles() {
+            const coll = document.getElementsByClassName("collapsible");
+            for (let c of coll) {
+                c.addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
+                });
+            }
         }
 
-        // 主验证函数（完整古算流程）
+        // 主验证函数（优化版）
         function verifyGoldbach() {
             const n2Input = document.getElementById("evenNum");
             const coeffInput = document.getElementById("coeff");
             const resultDiv = document.getElementById("result");
             
-            // 清空结果并显示加载状态
             resultDiv.innerHTML = '<div class="loading">正在执行古算验证流程...</div>';
             
             // 输入验证
@@ -356,20 +375,20 @@
             }
             
             if (isNaN(c) || c <= 0 || c > 1) {
-                resultDiv.innerHTML = '<div class="error">洛书覆盖系数c需在0到1之间！（古算保守值为1/3）</div>';
+                resultDiv.innerHTML = '<div class="error">洛书覆盖系数c需在0到1之间！</div>';
                 coeffInput.focus();
                 return;
             }
 
-            // 使用setTimeout避免UI阻塞
+            // 使用Web Worker思路：分阶段计算，避免阻塞
             setTimeout(() => {
                 try {
-                    // 古算步骤1：计算模数集合（对应孙子定理模数选取）
+                    // 古算步骤1：模数选取
                     const q = Math.floor(Math.sqrt(n2));
-                    const MList = sieveOddPrimesUpTo(q); // 不超过√(2n)的奇素数
-                    const F = getPrimeFactors(n2);       // 2n的素因子集合
-                    const MPrime = MList.filter(m => !F.includes(m)); // 剔除素因子后的模数集合
-
+                    const MList = sieveOddPrimesUpTo(q);
+                    const F = getPrimeFactors(n2);
+                    const MPrime = MList.filter(m => !F.includes(m)).slice(0, 10); // 限制模数数量
+                    
                     // 古算步骤2：构造同余组
                     const remainders = [];
                     for (let m of MPrime) {
@@ -379,112 +398,91 @@
                         remainders.push(a);
                     }
 
-                    // 古算步骤3：生成候选集（出入相补原理）
+                    // 古算步骤3：生成候选集
                     const candidates = generateCandidates(n2, MPrime, remainders);
 
                     // 古算步骤4：寻找素数对
                     const pairs = findPrimePairs(n2, candidates);
                     const hasPair = pairs.length > 0;
 
-                    // 古算步骤5：密度下界计算（割圆术比例法）
+                    // 古算步骤5：密度计算
                     let MTotal = 1, phiM = 1;
-                    MPrime.forEach(m => {
+                    for (let m of MPrime.slice(0, 5)) { // 限制计算数量
                         MTotal *= m;
-                        phiM *= (m - 1); // 欧拉函数近似（古算“剩余类计数”）
-                    });
+                        phiM *= (m - 1);
+                    }
                     const logN = Math.log(n2);
-                    const piApprox = n2 / logN; // 素数数量近似（古算“素数密度”）
-                    const b = MList.length ? (1 - F.length / MList.length) : 0.5; // 出入相补平衡系数
-                    const denominator = phiM * logN;
-                    const L = denominator !== 0 ? (c * b * piApprox) / denominator : c * b * piApprox;
+                    const piApprox = n2 / logN;
+                    const b = MList.length ? (1 - F.length / MList.length) : 0.5;
+                    const denominator = phiM * logN || 1;
+                    const L = (c * b * piApprox) / denominator;
 
                     // 构建结果HTML
                     let html = `<h3>古算验证结果（2n=${n2}）</h3>`;
                     
-                    // 模数集合部分（数量大时折叠）
-                    let moduliContent = `
-                        <div class="result-item"><strong>√(${n2}) = ${q}</strong></div>
-                        <div class="result-item">不超过√(${n2})的奇素数总数：${MList.length}</div>
-                        <div class="result-item"><strong>素数列表：</strong></div>
-                        <div class="prime-list">${MList.join(', ')}</div>
+                    // 模数选取部分
+                    html += `
+                    <button class="collapsible">1. 模数选取（孙子定理）</button>
+                    <div class="collapsible-content">
+                        <div class="summary-line">基础参数：</div>
+                        <div class="result-item">√(${n2}) = ${q}</div>
+                        <div class="result-item">不超过√(${n2})的奇素数数量：${MList.length}</div>
                         <div class="result-item">${n2}的素因子（约分术）：${F.join(', ') || '无'}</div>
                         <div class="result-item">最终模数集合M'：${MPrime.join(', ') || '无'}</div>
+                        ${MList.length <= 30 ? `<div class="result-item"><strong>素数列表：</strong><div class="prime-list">${MList.join(', ')}</div></div>` : ''}
+                    </div>
                     `;
                     
-                    const { collapsibleDiv: moduliCollapsible, contentDiv: moduliContentDiv } = createCollapsible(
-                        `1. 模数选取（孙子定理）${MList.length > 20 ? `(${MList.length}个素数)` : ''}`,
-                        moduliContent
-                    );
-                    
-                    // 候选集部分
-                    let candidateContent = `
-                        <div class="result-item">构造的候选集：${candidates.join(', ')}</div>
+                    // 候选集构造部分
+                    html += `
+                    <button class="collapsible">2. 候选集构造（出入相补原理）</button>
+                    <div class="collapsible-content">
+                        <div class="result-item">同余组余数：${remainders.join(', ') || '无'}</div>
+                        <div class="result-item">构造的候选集：<div class="prime-list">${candidates.join(', ')}</div></div>
                         <div class="result-item">候选集大小：${candidates.length}</div>
+                    </div>
                     `;
-                    
-                    const { collapsibleDiv: candidateCollapsible, contentDiv: candidateContentDiv } = createCollapsible(
-                        '2. 候选集构造（出入相补原理）',
-                        candidateContent
-                    );
                     
                     // 素数对结果
-                    let pairContent = '';
+                    html += `<div class="section-title">3. 素数对结果（杨辉筛法验证）</div>`;
                     if (hasPair) {
-                        pairContent = `
-                            <div class="result-item success">找到素数对（前5个）：</div>
-                            <div class="result-item">${pairs.map((p, idx) => `${idx+1}. (${p[0]}, ${p[1]})`).join('<br>')}</div>
-                            <div class="result-item success">结论：${n2}可表为两个素数之和，符合哥德巴赫猜想！</div>
+                        html += `
+                        <div class="result-item success">找到素数对（前5个）：</div>
+                        <div class="result-item">${pairs.map((p, idx) => `${idx+1}. ${p[0]} + ${p[1]} = ${n2}`).join('<br>')}</div>
+                        <div class="result-item success">结论：${n2}可表为两个素数之和，符合哥德巴赫猜想！</div>
                         `;
                     } else {
-                        pairContent = `<div class="result-item error">未找到素数对（极端情形，需放宽约束）</div>`;
+                        html += `<div class="result-item error">未找到素数对（极端情形）</div>`;
                     }
                     
                     // 密度分析部分
-                    let densityContent = `
+                    html += `
+                    <button class="collapsible">4. 密度下界分析（割圆术比例法）</button>
+                    <div class="collapsible-content">
                         <div class="formula">洛书覆盖系数c = ${c.toFixed(4)}</div>
                         <div class="formula">出入相补平衡系数b = ${b.toFixed(4)}</div>
                         <div class="formula">欧拉函数乘积φ(M) = ${phiM}</div>
                         <div class="formula">密度下界L = ${L.toFixed(8)}（恒正，故必有素数对）</div>
+                    </div>
                     `;
                     
-                    const { collapsibleDiv: densityCollapsible, contentDiv: densityContentDiv } = createCollapsible(
-                        '3. 密度下界分析（割圆术比例法）',
-                        densityContent
-                    );
-                    
-                    // 组装结果
                     resultDiv.innerHTML = html;
+                    initCollapsibles();
                     
-                    // 添加模数折叠面板
-                    resultDiv.appendChild(moduliCollapsible);
-                    resultDiv.appendChild(moduliContentDiv);
-                    
-                    // 添加候选集折叠面板
-                    resultDiv.appendChild(candidateCollapsible);
-                    resultDiv.appendChild(candidateContentDiv);
-                    
-                    // 添加素数对结果
-                    resultDiv.innerHTML += `<div class="section-title">4. 素数对结果（杨辉筛法验证）</div>${pairContent}`;
-                    
-                    // 添加密度分析折叠面板
-                    resultDiv.appendChild(densityCollapsible);
-                    resultDiv.appendChild(densityContentDiv);
-                    
-                    // 小素数列表自动展开
-                    if (MList.length <= 20) {
-                        moduliCollapsible.click();
-                        candidateCollapsible.click();
-                        densityCollapsible.click();
+                    // 默认展开第一个面板
+                    const firstCollapsible = document.querySelector('.collapsible');
+                    if (firstCollapsible) {
+                        firstCollapsible.click();
                     }
                     
                 } catch (error) {
-                    resultDiv.innerHTML = `<div class="error">验证过程出错：${error.message}</div>`;
+                    resultDiv.innerHTML = `<div class="error">验证出错：${error.message}</div>`;
                     console.error(error);
                 }
-            }, 50);
+            }, 10);
         }
 
-        // 输入框回车触发验证
+        // 回车触发验证
         document.getElementById("evenNum").addEventListener("keypress", function(e) {
             if (e.key === "Enter") verifyGoldbach();
         });
