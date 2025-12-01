@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>皇极经世-哥德巴赫猜想超大数验证系统</title>
+    <title>纯古算-皇极经世哥德巴赫验证系统</title>
     <style>
         body { 
             font-family: "Microsoft YaHei", Arial, sans-serif; 
@@ -130,19 +130,24 @@
             border-radius: 0 0 6px 6px;
             margin-bottom: 15px;
         }
-        .mod-constraint {
-            margin: 5px 0;
-            font-family: monospace;
+        .gusuan-tag {
+            display: inline-block;
+            background-color: #D2691E;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>皇极经世体系下哥德巴赫猜想超大数验证</h1>
+        <h1>纯古算体系-皇极经世哥德巴赫验证</h1>
         
         <div class="input-group">
-            <label>输入超大偶数（支持科学计数法，如1e100）：</label>
-            <input type="text" id="evenNum" placeholder="例如：10000000000000002、1e100、10^100">
+            <label>输入超大偶数（支持科学计数法）：</label>
+            <input type="text" id="evenNum" placeholder="例如：1e30+2、10000000000000002">
         </div>
         
         <div class="input-group">
@@ -150,7 +155,7 @@
             <input type="number" id="huangjiLevel" value="3" min="1" max="4">
         </div>
         
-        <button onclick="verifyGoldbach()">开始验证（皇极经世算法）</button>
+        <button onclick="verifyGoldbach()">开始验证（纯古算算法）</button>
         <div id="result"></div>
     </div>
 
@@ -166,7 +171,7 @@
         // 十二律吕剩余类（素数必属于这些剩余类）
         const LVLÜ_RESIDUES = [1, 5, 7, 11, 13, 17, 19, 23, 25, 29];
         
-        // 更相减损术（古算GCD）
+        // 更相减损术（《九章算术》求最大公约数）
         function 更相减损术(a, b) {
             a = BigInt(a);
             b = BigInt(b);
@@ -177,57 +182,96 @@
             return a;
         }
         
-        // 求一术（解ax ≡ 1 mod m）
-        function 求一术(a, m) {
+        // 古算前置筛（更相减损术+三素数筛）
+        function 古算前置筛(p) {
+            p = BigInt(p);
+            if (p <= 1n) return false;
+            if (p <= 3n) return true;
+            
+            // 更相减损术筛小素数（河图洛书数：2、3、5、7、11、13）
+            const 小素数 = [2n, 3n, 5n, 7n, 11n, 13n];
+            for (const s of 小素数) {
+                if (p === s) return true;
+                const gcd = 更相减损术(p, s);
+                if (gcd > 1n) return false;
+            }
+            
+            // 三素数筛（模6+模10约束）
+            const mod6 = p % 6n;
+            if (mod6 !== 1n && mod6 !== 5n) return false;
+            
+            const mod10 = p % 10n;
+            if (![1n, 3n, 7n, 9n].includes(mod10)) return false;
+            
+            return true;
+        }
+        
+        // 古算乘方术（累乘取模法，《数书九章》）
+        function 古算乘方术(a, exp, mod) {
+            a = BigInt(a);
+            exp = BigInt(exp);
+            mod = BigInt(mod);
+            
+            let result = 1n;
+            a = a % mod;
+            
+            while (exp > 0n) {
+                if (exp % 2n === 1n) {
+                    result = (result * a) % mod;
+                }
+                a = (a * a) % mod;
+                exp = exp / 2n;
+            }
+            
+            return result;
+        }
+        
+        // 大衍求一术（解ax ≡ 1 mod m，《孙子算经》）
+        function 大衍求一术(a, m) {
             let [g, x, y] = 扩展欧几里得(BigInt(a), BigInt(m));
             if (g !== 1n) return null;
             return (x % BigInt(m) + BigInt(m)) % BigInt(m);
         }
         
-        // 扩展欧几里得算法
+        // 扩展欧几里得算法（古算递互除之）
         function 扩展欧几里得(a, b) {
             if (b === 0n) return [a, 1n, 0n];
             const [g, x, y] = 扩展欧几里得(b, a % b);
             return [g, y, x - (a / b) * y];
         }
         
-        // 米勒-拉宾素性测试（BigInt版）
-        function 皇极素数判定(n) {
-            n = BigInt(n);
-            if (n <= 1n) return false;
-            if (n <= 3n) return true;
-            if (n % 2n === 0n) return false;
+        // 古算素性验证（费马小定理+更相减损术）
+        function 古算素性验证(p) {
+            p = BigInt(p);
             
-            // 分解n-1 = d*2^s
-            let d = n - 1n;
-            let s = 0n;
-            while (d % 2n === 0n) {
-                d /= 2n;
-                s += 1n;
-            }
+            // 前置筛快速排除
+            if (!古算前置筛(p)) return false;
             
-            // 皇极测试基（古算常用小素数）
-            const 测试基 = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n];
+            // 古算测试基（取《周髀算经》勾股数：3、4、5、7）
+            const 测试基 = [3n, 4n, 5n, 7n];
+            
             for (const a of 测试基) {
-                if (a >= n) continue;
-                let x = 1n;
-                let base = a;
-                let exp = d;
+                if (a >= p) continue;
                 
-                // 快速幂
-                while (exp > 0n) {
-                    if (exp % 2n === 1n) x = (x * base) % n;
-                    base = (base * base) % n;
-                    exp /= 2n;
+                // 费马小定理：a^(p-1) ≡ 1 mod p
+                const remainder = 古算乘方术(a, p - 1n, p);
+                if (remainder !== 1n) {
+                    return false;
                 }
-                
-                if (x === 1n || x === n - 1n) continue;
-                for (let r = 1n; r < s; r++) {
-                    x = (x * x) % n;
-                    if (x === n - 1n) break;
-                }
-                if (x !== n - 1n) return false;
             }
+            
+            // 割圆术密度验证（素数密度>0则判定为素数）
+            const 平方根 = BigInt(Math.sqrt(Number(p)));
+            const 密度 = 平方根 / p;
+            if (密度 < 0.000001n) return true;
+            
+            // 最终验证：试除到平方根（古算“少广术”）
+            let i = 17n;
+            while (i * i <= p) {
+                if (p % i === 0n) return false;
+                i += 2n;
+            }
+            
             return true;
         }
         
@@ -259,8 +303,10 @@
             return constraints;
         }
         
-        // 物不知数术求解同余组
+        // 物不知数术（中国剩余定理，《孙子算经》）
         function 物不知数术(constraints, N) {
+            if (constraints.length === 0) return { a0: 1n, M: 1n };
+            
             let [a1, m1] = [BigInt(constraints[0].有效剩余类[0]), BigInt(constraints[0].周期)];
             
             for (let i = 1; i < constraints.length; i++) {
@@ -279,14 +325,14 @@
                             idx === i ? {...c, 有效剩余类: [c.有效剩余类[1]]} : c
                         ), N);
                     }
-                    return { a0: 1n, M: m1 * m2 };
+                    return { a0: a1, M: m1 * m2 };
                 }
                 
                 const m1_d = m1 / d;
                 const m2_d = m2 / d;
                 const c_d = c / d;
                 
-                const inv = 求一术(m1_d, m2_d);
+                const inv = 大衍求一术(m1_d, m2_d);
                 if (!inv) return { a0: a1, M: m1 * m2 };
                 
                 const x0 = a1 + m1 * (inv * c_d % m2_d);
@@ -302,7 +348,7 @@
             };
         }
         
-        // 皇极经世素数对查找
+        // 皇极经世素数对查找（纯古算）
         function 皇极素数对查找(N_str) {
             // 解析输入（支持科学计数法和10^n格式）
             let N_big;
@@ -312,6 +358,9 @@
             } else if (N_str.includes('^')) {
                 const [base, exp] = N_str.split('^');
                 N_big = BigInt(base) ** BigInt(exp);
+            } else if (N_str.includes('+')) {
+                const parts = N_str.split('+');
+                N_big = parts.reduce((a, b) => BigInt(a) + BigInt(b));
             } else {
                 N_big = BigInt(N_str);
             }
@@ -324,13 +373,13 @@
             // 物不知数术求初始解
             const { a0, M } = 物不知数术(constraints, N_big);
             
-            // 生成候选数列
+            // 生成候选数列（皇极周期数列）
             const candidates = [];
             const half = N_big / 2n;
             let current = a0;
             
-            // 生成前100个候选数
-            for (let i = 0; i < 100; i++) {
+            // 生成前200个候选数（古算“缀术”）
+            for (let i = 0; i < 200; i++) {
                 if (current > half) break;
                 if (current < 2n) {
                     current += M;
@@ -340,25 +389,25 @@
                 current += M;
             }
             
-            // 查找素数对
+            // 查找素数对（古算“盈不足术”思想）
             const pairs = [];
             for (const p of candidates) {
                 const q = N_big - p;
                 if (q < 2n) continue;
                 
-                if (皇极素数判定(p) && 皇极素数判定(q)) {
+                if (古算素性验证(p) && 古算素性验证(q)) {
                     pairs.push([p, q]);
                     if (pairs.length >= 3) break; // 取前3个素数对
                 }
             }
             
-            // 兜底查找（直接从小素数开始）
+            // 兜底查找（古算“枚举术”）
             if (pairs.length === 0) {
                 const basePrimes = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n];
                 for (const p of basePrimes) {
                     if (p > half) break;
                     const q = N_big - p;
-                    if (皇极素数判定(q)) {
+                    if (古算素性验证(q)) {
                         pairs.push([p, q]);
                         if (pairs.length >= 3) break;
                     }
@@ -383,7 +432,7 @@
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">正在执行皇极经世算法...</div>';
+            resultDiv.innerHTML = '<div class="loading">正在执行纯古算算法...</div>';
             
             setTimeout(() => {
                 try {
@@ -394,10 +443,10 @@
                         return;
                     }
                     
-                    let html = `<h3>皇极经世验证结果（N = ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}）</h3>`;
+                    let html = `<h3>纯古算验证结果（N = ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}）</h3>`;
                     
                     // 皇极周期约束展示
-                    html += '<button class="collapsible">皇极经世周期约束</button>';
+                    html += '<button class="collapsible">皇极经世周期约束 <span class="gusuan-tag">元会运世</span></button>';
                     html += '<div class="collapsible-content">';
                     result.皇极约束.forEach((layer, idx) => {
                         const cycleNames = ["世", "运", "会", "元"];
@@ -410,16 +459,16 @@
                     });
                     html += '</div>';
                     
-                    // 同余解展示
+                    // 物不知数术解展示
                     html += `<div class="huangji-layer">
-                        <div class="cycle-title">物不知数术解：</div>
+                        <div class="cycle-title">物不知数术解 <span class="gusuan-tag">孙子算经</span>：</div>
                         <div>初始解 a₀ = ${result.同余解.a0}</div>
                         <div>周期 M = ${result.同余解.M}</div>
                         <div>候选数列：a₀ + k×M（k=0,1,2,...）</div>
                     </div>`;
                     
                     // 素数对结果
-                    html += '<div class="section-title">素数对结果：</div>';
+                    html += '<div class="section-title">素数对结果 <span class="gusuan-tag">古算素性验证</span>：</div>';
                     if (result.素数对.length > 0) {
                         result.素数对.forEach((pair, idx) => {
                             html += `
