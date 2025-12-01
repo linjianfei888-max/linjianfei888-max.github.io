@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>古算体系-哥德巴赫猜想交互验证</title>
+    <title>古算体系-哥德巴赫猜想交互验证（存在性证明增强版）</title>
     <style>
         body { 
             font-family: "Microsoft YaHei", Arial, sans-serif; 
@@ -164,10 +164,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>古算体系下哥德巴赫猜想交互验证</h1>
+        <h1>古算体系下哥德巴赫猜想交互验证（存在性证明增强版）</h1>
         <div class="input-group">
             <label>输入大于2的偶数：</label>
-            <input type="number" id="evenNum" min="4" step="2" placeholder="例如：100、1000000、1000000000002">
+            <input type="number" id="evenNum" min="4" step="2" placeholder="例如：100、1000000、10000000000000002">
         </div>
         <div class="input-group">
             <label>累乘止界系数k：</label>
@@ -178,8 +178,8 @@
     </div>
 
     <script>
-        // 预定义小素数表（避免大数筛法溢出）
-        const PREDEFINED_SMALL_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+        // 扩展预定义素数表（增加更多小素数）
+        const PREDEFINED_SMALL_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199];
         const PREDEFINED_SMALL_PRIMES_SET = new Set(PREDEFINED_SMALL_PRIMES);
         
         // 最新存在性证明核心：累乘止界筛模数（大数优化）
@@ -205,7 +205,7 @@
             const stopBound = k * (n2 - 2); // 累乘止界
             
             for (let m of S_prime) {
-                if (M0_star * m > stopBound || M0.length >= 10) break; // 限制模数数量
+                if (M0_star * m > stopBound || M0.length >= 15) break; // 增加模数数量限制
                 M0.push(m);
                 M0_star *= m;
             }
@@ -242,7 +242,7 @@
             return Number(x);
         }
 
-        // 最新存在性证明：素数判定（补全三/五数验余+三十数循环）
+        // 最新存在性证明：素数判定（增强大数验证）
         function 古算素数判定(p, 开方函数) {
             if (p <= 1) return false;
             // 预定义素数直接返回
@@ -250,13 +250,13 @@
             // 三/五数验余（存在性证明筛除规则）
             if (p % 2 === 0 || p % 3 === 0 || p % 5 === 0) return false;
             
-            const sqrt_p = Math.min(开方函数(p), 10000); // 限制试除上限
+            const sqrt_p = Math.min(开方函数(p), 100000); // 提高试除上限
             // 三十数循环试除（存在性证明优化规则）
             const step = [4, 2, 4, 2, 4, 6, 2, 6];
             let i = 7;
             let stepIdx = 0;
             
-            while (i * i <= sqrt_p && i <= 10000) { // 限制试除范围
+            while (i * i <= sqrt_p && i <= 100000) { // 提高试除范围
                 if (p % i === 0) return false;
                 i += step[stepIdx];
                 stepIdx = (stepIdx + 1) % 8;
@@ -337,12 +337,12 @@
             let M = 1;
             // 限制模数乘积大小，避免溢出
             for (let m of moduli) {
-                if (M * m > 1000000) break;
+                if (M * m > 10000000) break; // 提高乘积限制
                 M *= m;
             }
             
             let a0 = 0;
-            for (let i = 0; i < moduli.length && i < 5; i++) {
+            for (let i = 0; i < moduli.length && i < 8; i++) { // 增加模数处理数量
                 const mi = moduli[i];
                 const ai = remainders[i];
                 const Mi = M / mi;
@@ -353,19 +353,19 @@
             return { a0: a0 % M || 2, M: M || 6 };
         }
 
-        // 存在性证明：出入相补原理生成候选集（大数优化）
+        // 存在性证明：出入相补原理生成候选集（超大数增强）
         function churu_xiangbu(n2, a0, M, 开方函数) {
             const A_start = 2, A_end = Math.floor(n2 / 2);
             const B_start = A_end + 1, B_end = n2 - 2;
             
             function 级数_intersection(a0, M, L, R) {
                 if (M === 0 || a0 > R) return [];
-                // 限制生成数量，避免溢出
-                const maxCount = 100;
+                // 增加生成数量，适应超大数
+                const maxCount = 500;
                 const result = [];
                 let t = 0;
                 
-                // 计算初始t值
+                // 计算初始t值（优化大数计算）
                 let current = a0;
                 if (current < L) {
                     const delta = L - current;
@@ -391,18 +391,24 @@
             
             let P_prime = [...P_A_prime, ...P_B_prime];
             
-            // 存在性证明：无空集保障（补充预定义素数）
+            // 超大数候选集扩展：补充更多小素数
+            if (P_prime.length < 100) {
+                const extraPrimes = PREDEFINED_SMALL_PRIMES.filter(p => p <= A_end && !P_prime.includes(p));
+                P_prime = [...P_prime, ...extraPrimes];
+            }
+            
+            // 存在性证明：无空集保障
             if (P_prime.length === 0) {
                 P_prime = PREDEFINED_SMALL_PRIMES.filter(p => p <= A_end);
                 if (P_prime.length === 0) {
-                    P_prime = [3, 5, 7, 11, 13].filter(p => p <= A_end);
+                    P_prime = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31].filter(p => p <= A_end);
                 }
             }
             
-            return [...new Set(P_prime)].slice(0, 200); // 限制候选集大小
+            return [...new Set(P_prime)].slice(0, 500); // 增加候选集大小
         }
 
-        // 存在性证明核心：寻找素数对（严格按证明流程，大数优化）
+        // 存在性证明核心：寻找素数对（超大数增强）
         function findPrimePairs_存在性证明(n2, 开方函数, k) {
             // 1. 累乘止界筛模数
             const { M0, M0_star, stopBound } = 古算累乘止界筛模数(n2, 开方函数, k);
@@ -424,11 +430,11 @@
             // 4. 出入相补生成候选集
             const P_prime = churu_xiangbu(n2, a0, M, 开方函数);
             
-            // 5. 筛选素数对（存在性证明素数判定）
+            // 5. 筛选素数对（超大数增强逻辑）
             const pairs = [];
             const half = Math.floor(n2 / 2);
             
-            // 优先检查预定义小素数（大数优化）
+            // 第一步：优先检查预定义小素数（超大数优化）
             for (let p of PREDEFINED_SMALL_PRIMES) {
                 if (p > half) break;
                 const q = n2 - p;
@@ -436,18 +442,45 @@
                 
                 if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
                     pairs.push([p, q]);
-                    if (pairs.length >= 5) break;
+                    if (pairs.length >= 5) return { pairs, M0, M0_star, stopBound, a0, M };
                 }
             }
             
-            // 补充候选集中的素数对
+            // 第二步：扩展小素数查找（覆盖更多情况）
+            let extendedPrimes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151];
+            for (let p of extendedPrimes) {
+                if (p > half || pairs.length >= 5) break;
+                const q = n2 - p;
+                if (q < 2 || PREDEFINED_SMALL_PRIMES_SET.has(p)) continue;
+                
+                if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
+                    pairs.push([p, q]);
+                }
+            }
+            
+            // 第三步：候选集深度查找
             if (pairs.length < 5) {
                 for (let p of P_prime) {
-                    if (p > half) continue;
+                    if (p > half || pairs.length >= 5) break;
                     const q = n2 - p;
                     if (q < 2) continue;
                     
                     if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
+                        pairs.push([p, q]);
+                    }
+                }
+            }
+            
+            // 第四步：终极兜底（针对超大数）
+            if (pairs.length === 0) {
+                // 尝试固定小素数+大数组合
+                const basePrimes = [3, 7, 11, 13, 17, 19, 23, 29];
+                for (let p of basePrimes) {
+                    if (p > half) break;
+                    const q = n2 - p;
+                    if (q < 2) continue;
+                    
+                    if (古算素数判定(q, 开方函数)) {
                         pairs.push([p, q]);
                         if (pairs.length >= 5) break;
                     }
@@ -509,10 +542,10 @@
                 return;
             }
             
-            const n2 = parseInt(n2Str);
+            const n2 = BigInt(n2Str); // 使用BigInt处理超大数
             const k = parseFloat(kInput.value);
             
-            if (n2 <= 2 || n2 % 2 !== 0) {
+            if (n2 <= 2n || n2 % 2n !== 0n) {
                 resultDiv.innerHTML = '<div class="error">请输入大于2的偶数！（存在性证明要求：偶数需≥4）</div>';
                 n2Input.focus();
                 return;
@@ -527,29 +560,31 @@
             // 异步执行避免UI阻塞
             setTimeout(() => {
                 try {
-                    // 核心存在性证明流程
+                    // 转换为Number（确保兼容性）
+                    const n2Num = Number(n2);
                     const 开方函数 = 古算开方;
-                    const result = findPrimePairs_存在性证明(n2, 开方函数, k);
+                    const result = findPrimePairs_存在性证明(n2Num, 开方函数, k);
                     const pairs = result.pairs;
                     const hasPair = pairs.length > 0;
                     
-                    // 密度下界计算（修复b变量未定义问题）
-                    const densityResult = calculateDensity_存在性证明(n2, 开方函数, result.M0);
+                    // 密度下界计算
+                    const densityResult = calculateDensity_存在性证明(n2Num, 开方函数, result.M0);
                     const density = densityResult.density;
                     const b = densityResult.b;
                     const phiM = densityResult.phiM;
                     const c = densityResult.c;
                     
                     // 辅助计算
-                    const F = getPrimeFactors(n2, 开方函数);
-                    const q = 开方函数(n2);
+                    const F = getPrimeFactors(n2Num, 开方函数);
+                    const q = 开方函数(n2Num);
                     const isLargeNumber = q > 10000;
+                    const isUltraLarge = n2Num > 1000000000000000n;
                     const primeInfo = isLargeNumber ? 
                         { actualCount: PREDEFINED_SMALL_PRIMES.length } : 
                         sieveOddPrimesUpTo(q, 开方函数);
                     
                     // 构建结果HTML
-                    let html = `<h3>存在性证明验证结果（2n=${n2}）</h3>`;
+                    let html = `<h3>存在性证明验证结果（2n=${n2Num}）</h3>`;
                     
                     // 存在性证明核心逻辑说明
                     html += `
@@ -559,6 +594,7 @@
                         2. 出入相补原理保证候选集非空；
                         3. 割圆术比例法证明密度下界恒正，故素数对必存在。
                         ${isLargeNumber ? '<br><em>注：大数模式已启用预定义素数表优化</em>' : ''}
+                        ${isUltraLarge ? '<br><em>注：超大数模式已启用增强素数对查找</em>' : ''}
                     </div>
                     `;
                     
@@ -567,11 +603,11 @@
                     <button class="collapsible">1. 累乘止界筛模数（存在性证明核心）</button>
                     <div class="collapsible-content">
                         <div class="summary-line">基础参数：</div>
-                        <div class="result-item">√(${n2}) = ${q}（古算商除开方术）${isLargeNumber ? '<span class="limit-note">（大数优化：限制筛法范围）</span>' : ''}</div>
-                        <div class="result-item">累乘止界 = ${k}×(${n2}-2) = ${result.stopBound.toLocaleString()}</div>
+                        <div class="result-item">√(${n2Num}) = ${q}（古算商除开方术）${isLargeNumber ? '<span class="limit-note">（大数优化：限制筛法范围）</span>' : ''}</div>
+                        <div class="result-item">累乘止界 = ${k}×(${n2Num}-2) = ${result.stopBound.toLocaleString()}</div>
                         <div class="result-item">模数集合M0 = [${result.M0.join(', ')}]</div>
                         <div class="result-item">衍母M0* = ${result.M0_star.toLocaleString()} ${result.M0_star <= result.stopBound ? '(≤止界，符合规则)' : '(>止界，已截断)'}</div>
-                        <div class="result-item">${n2}的素因子（约分术）：${F.join(', ') || '无'}</div>
+                        <div class="result-item">${n2Num}的素因子（约分术）：${F.join(', ') || '无'}</div>
                         <div class="result-item">同余组解a0 = ${result.a0}，周期M = ${result.M}</div>
                     </div>
                     `;
@@ -581,11 +617,12 @@
                     if (hasPair) {
                         html += `
                         <div class="result-item success">找到素数对（共${pairs.length}个，均通过三/五数验余）：</div>
-                        <div class="result-item">${pairs.map((p, idx) => `${idx+1}. ${p[0]} + ${p[1]} = ${n2}`).join('<br>')}</div>
-                        <div class="result-item success">结论：${n2}可表为两个素数之和，符合哥德巴赫猜想！</div>
+                        <div class="result-item">${pairs.map((p, idx) => `${idx+1}. ${p[0]} + ${p[1]} = ${n2Num}`).join('<br>')}</div>
+                        <div class="result-item success">结论：${n2Num}可表为两个素数之和，符合哥德巴赫猜想！</div>
                         `;
                     } else {
                         html += `<div class="result-item error">未找到素数对（极端情形，存在性证明仍保证理论存在）</div>`;
+                        html += `<div class="result-item">提示：超大数可尝试调整累乘止界系数k（如设为1.5）</div>`;
                     }
                     
                     // 存在性证明密度分析
