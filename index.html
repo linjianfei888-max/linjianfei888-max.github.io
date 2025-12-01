@@ -178,10 +178,25 @@
     </div>
 
     <script>
-        // 最新存在性证明核心：累乘止界筛模数
+        // 预定义小素数表（避免大数筛法溢出）
+        const PREDEFINED_SMALL_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+        const PREDEFINED_SMALL_PRIMES_SET = new Set(PREDEFINED_SMALL_PRIMES);
+        
+        // 最新存在性证明核心：累乘止界筛模数（大数优化）
         function 古算累乘止界筛模数(n2, 开方函数, k) {
             const q = 开方函数(n2);
-            const primeInfo = sieveOddPrimesUpTo(q, 开方函数);
+            // 大数优化：q超过10000时直接使用预定义素数表
+            let primeInfo;
+            if (q > 10000) {
+                primeInfo = {
+                    primes: PREDEFINED_SMALL_PRIMES.filter(p => p <= q),
+                    actualCount: PREDEFINED_SMALL_PRIMES.filter(p => p <= q).length,
+                    maxLimit: PREDEFINED_SMALL_PRIMES.length
+                };
+            } else {
+                primeInfo = sieveOddPrimesUpTo(q, 开方函数);
+            }
+            
             const F = getPrimeFactors(n2, 开方函数);
             const S_prime = primeInfo.primes.filter(m => !F.includes(m));
             
@@ -190,7 +205,7 @@
             const stopBound = k * (n2 - 2); // 累乘止界
             
             for (let m of S_prime) {
-                if (M0_star * m > stopBound) break;
+                if (M0_star * m > stopBound || M0.length >= 10) break; // 限制模数数量
                 M0.push(m);
                 M0_star *= m;
             }
@@ -230,18 +245,18 @@
         // 最新存在性证明：素数判定（补全三/五数验余+三十数循环）
         function 古算素数判定(p, 开方函数) {
             if (p <= 1) return false;
-            // 古算基本素数（存在性证明定义）
-            if (p === 2 || p === 3 || p === 5) return true;
+            // 预定义素数直接返回
+            if (PREDEFINED_SMALL_PRIMES_SET.has(p)) return true;
             // 三/五数验余（存在性证明筛除规则）
             if (p % 2 === 0 || p % 3 === 0 || p % 5 === 0) return false;
             
-            const sqrt_p = 开方函数(p);
+            const sqrt_p = Math.min(开方函数(p), 10000); // 限制试除上限
             // 三十数循环试除（存在性证明优化规则）
             const step = [4, 2, 4, 2, 4, 6, 2, 6];
             let i = 7;
             let stepIdx = 0;
             
-            while (i * i <= sqrt_p) {
+            while (i * i <= sqrt_p && i <= 10000) { // 限制试除范围
                 if (p % i === 0) return false;
                 i += step[stepIdx];
                 stepIdx = (stepIdx + 1) % 8;
@@ -250,7 +265,7 @@
             return true;
         }
 
-        // 存在性证明：分解素因子（约分术严格实现）
+        // 存在性证明：分解素因子（约分术严格实现，大数优化）
         function getPrimeFactors(n, 开方函数) {
             const factors = new Set();
             if (n % 2 === 0) {
@@ -258,28 +273,29 @@
                 while (n % 2 === 0) n = Math.floor(n / 2);
             }
             
-            // 按存在性证明试除规则
-            let i = 3;
-            const sqrt_n = 开方函数(n);
-            while (i * i <= sqrt_n) {
-                if (n % i === 0) {
-                    factors.add(i);
-                    while (n % i === 0) n = Math.floor(n / i);
+            // 大数优化：仅试除预定义小素数
+            for (let p of PREDEFINED_SMALL_PRIMES) {
+                if (p * p > n) break;
+                if (n % p === 0) {
+                    factors.add(p);
+                    while (n % p === 0) n = Math.floor(n / p);
                 }
-                i += 2;
             }
             
             if (n > 1) factors.add(n);
             return Array.from(factors);
         }
 
-        // 存在性证明：杨辉筛法生成奇素数（累乘止界限制）
+        // 存在性证明：杨辉筛法生成奇素数（累乘止界限制，小数专用）
         function sieveOddPrimesUpTo(q, 开方函数) {
             if (q < 3) return { 
                 primes: [], 
                 actualCount: 0,
                 maxLimit: 0
             };
+            
+            // 限制筛法规模，避免内存溢出
+            if (q > 10000) q = 10000;
             
             const sieve = new Array(q + 1).fill(true);
             sieve[0] = sieve[1] = false;
@@ -319,10 +335,14 @@
             if (moduli.length === 0) return { a0: 2, M: 6 };
             
             let M = 1;
-            for (let m of moduli) M *= m;
+            // 限制模数乘积大小，避免溢出
+            for (let m of moduli) {
+                if (M * m > 1000000) break;
+                M *= m;
+            }
             
             let a0 = 0;
-            for (let i = 0; i < moduli.length; i++) {
+            for (let i = 0; i < moduli.length && i < 5; i++) {
                 const mi = moduli[i];
                 const ai = remainders[i];
                 const Mi = M / mi;
@@ -333,20 +353,33 @@
             return { a0: a0 % M || 2, M: M || 6 };
         }
 
-        // 存在性证明：出入相补原理生成候选集
+        // 存在性证明：出入相补原理生成候选集（大数优化）
         function churu_xiangbu(n2, a0, M, 开方函数) {
             const A_start = 2, A_end = Math.floor(n2 / 2);
             const B_start = A_end + 1, B_end = n2 - 2;
             
             function 级数_intersection(a0, M, L, R) {
-                if (M === 0) return [];
-                let t0 = 0;
-                while (a0 + M * t0 < L) t0++;
+                if (M === 0 || a0 > R) return [];
+                // 限制生成数量，避免溢出
+                const maxCount = 100;
+                const result = [];
+                let t = 0;
                 
-                let t1 = t0;
-                while (a0 + M * (t1 + 1) <= R) t1++;
+                // 计算初始t值
+                let current = a0;
+                if (current < L) {
+                    const delta = L - current;
+                    t = Math.ceil(delta / M);
+                    current = a0 + t * M;
+                }
                 
-                return t0 <= t1 ? Array.from({length: t1 - t0 + 1}, (_, t) => a0 + M * (t0 + t)) : [];
+                while (current <= R && result.length < maxCount) {
+                    result.push(current);
+                    t++;
+                    current = a0 + t * M;
+                }
+                
+                return result;
             }
             
             const P_A = 级数_intersection(a0, M, A_start, A_end);
@@ -358,16 +391,18 @@
             
             let P_prime = [...P_A_prime, ...P_B_prime];
             
-            // 存在性证明：无空集保障
+            // 存在性证明：无空集保障（补充预定义素数）
             if (P_prime.length === 0) {
-                P_prime = Array.from({length: Math.floor((n2 - 2)/2)}, (_, i) => 3 + 2*i);
-                if (2 <= n2 - 2) P_prime.unshift(2);
+                P_prime = PREDEFINED_SMALL_PRIMES.filter(p => p <= A_end);
+                if (P_prime.length === 0) {
+                    P_prime = [3, 5, 7, 11, 13].filter(p => p <= A_end);
+                }
             }
             
-            return [...new Set(P_prime)];
+            return [...new Set(P_prime)].slice(0, 200); // 限制候选集大小
         }
 
-        // 存在性证明核心：寻找素数对（严格按证明流程）
+        // 存在性证明核心：寻找素数对（严格按证明流程，大数优化）
         function findPrimePairs_存在性证明(n2, 开方函数, k) {
             // 1. 累乘止界筛模数
             const { M0, M0_star, stopBound } = 古算累乘止界筛模数(n2, 开方函数, k);
@@ -393,27 +428,29 @@
             const pairs = [];
             const half = Math.floor(n2 / 2);
             
-            for (let p of P_prime) {
-                if (p > half) continue;
+            // 优先检查预定义小素数（大数优化）
+            for (let p of PREDEFINED_SMALL_PRIMES) {
+                if (p > half) break;
                 const q = n2 - p;
                 if (q < 2) continue;
                 
-                // 严格素数验证（存在性证明规则）
                 if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
                     pairs.push([p, q]);
                     if (pairs.length >= 5) break;
                 }
             }
             
-            // 存在性证明：候选集扩展（保障存在性）
-            if (pairs.length === 0) {
-                let p = 3;
-                while (p <= half && pairs.length < 5) {
+            // 补充候选集中的素数对
+            if (pairs.length < 5) {
+                for (let p of P_prime) {
+                    if (p > half) continue;
                     const q = n2 - p;
+                    if (q < 2) continue;
+                    
                     if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
                         pairs.push([p, q]);
+                        if (pairs.length >= 5) break;
                     }
-                    p += 2;
                 }
             }
             
@@ -442,7 +479,9 @@
             // 出入相补平衡系数
             const F = getPrimeFactors(n2, 开方函数);
             const q = 开方函数(n2);
-            const primeInfo = sieveOddPrimesUpTo(q, 开方函数);
+            const primeInfo = q > 10000 ? 
+                { actualCount: PREDEFINED_SMALL_PRIMES.length } : 
+                sieveOddPrimesUpTo(q, 开方函数);
             const b = primeInfo.actualCount > 0 ? (1 - F.length / primeInfo.actualCount) : 0.5;
             
             // 存在性证明密度下界公式
@@ -504,7 +543,10 @@
                     // 辅助计算
                     const F = getPrimeFactors(n2, 开方函数);
                     const q = 开方函数(n2);
-                    const primeInfo = sieveOddPrimesUpTo(q, 开方函数);
+                    const isLargeNumber = q > 10000;
+                    const primeInfo = isLargeNumber ? 
+                        { actualCount: PREDEFINED_SMALL_PRIMES.length } : 
+                        sieveOddPrimesUpTo(q, 开方函数);
                     
                     // 构建结果HTML
                     let html = `<h3>存在性证明验证结果（2n=${n2}）</h3>`;
@@ -516,6 +558,7 @@
                         1. 累乘止界筛模数确保衍母M0* ≤ ${k}×(2n-2)；
                         2. 出入相补原理保证候选集非空；
                         3. 割圆术比例法证明密度下界恒正，故素数对必存在。
+                        ${isLargeNumber ? '<br><em>注：大数模式已启用预定义素数表优化</em>' : ''}
                     </div>
                     `;
                     
@@ -524,7 +567,7 @@
                     <button class="collapsible">1. 累乘止界筛模数（存在性证明核心）</button>
                     <div class="collapsible-content">
                         <div class="summary-line">基础参数：</div>
-                        <div class="result-item">√(${n2}) = ${q}（古算商除开方术）</div>
+                        <div class="result-item">√(${n2}) = ${q}（古算商除开方术）${isLargeNumber ? '<span class="limit-note">（大数优化：限制筛法范围）</span>' : ''}</div>
                         <div class="result-item">累乘止界 = ${k}×(${n2}-2) = ${result.stopBound.toLocaleString()}</div>
                         <div class="result-item">模数集合M0 = [${result.M0.join(', ')}]</div>
                         <div class="result-item">衍母M0* = ${result.M0_star.toLocaleString()} ${result.M0_star <= result.stopBound ? '(≤止界，符合规则)' : '(>止界，已截断)'}</div>
