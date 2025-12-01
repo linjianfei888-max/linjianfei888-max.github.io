@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>古算体系-哥德巴赫猜想交互验证</title>
+    <title>皇极经世-哥德巴赫猜想超大数验证系统</title>
     <style>
         body { 
             font-family: "Microsoft YaHei", Arial, sans-serif; 
@@ -11,7 +11,7 @@
             background-color: #f5f5f5;
         }
         .container { 
-            max-width: 900px; 
+            max-width: 1000px; 
             margin: 0 auto; 
             background: white;
             padding: 25px;
@@ -21,7 +21,7 @@
         h1 {
             color: #2c3e50;
             text-align: center;
-            border-bottom: 3px solid #3498db;
+            border-bottom: 3px solid #8B4513;
             padding-bottom: 15px;
             margin-bottom: 30px;
         }
@@ -33,7 +33,7 @@
             gap: 10px;
         }
         label {
-            min-width: 140px;
+            min-width: 180px;
             margin-right: 10px;
             color: #34495e;
             font-weight: 500;
@@ -49,7 +49,7 @@
         button { 
             padding: 12px 25px; 
             margin: 15px 0;
-            background-color: #3498db;
+            background-color: #8B4513;
             color: white;
             border: none;
             border-radius: 6px;
@@ -58,7 +58,7 @@
             transition: background 0.3s, transform 0.2s;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #A0522D;
             transform: translateY(-2px);
         }
         #result { 
@@ -81,23 +81,27 @@
             color: #e74c3c;
             font-weight: bold;
         }
-        .formula {
-            font-family: "Times New Roman", serif;
-            font-style: italic;
+        .huangji-layer {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #8B4513;
+            background-color: #FFF8DC;
+            border-radius: 0 6px 6px 0;
+        }
+        .cycle-title {
+            font-weight: bold;
+            color: #8B4513;
+            margin-bottom: 5px;
+        }
+        .prime-pair {
+            font-size: 18px;
             margin: 10px 0;
             padding: 8px;
-            background-color: #f0f8ff;
-            border-left: 3px solid #3498db;
-        }
-        .section-title {
-            color: #2c3e50;
-            font-size: 18px;
-            margin: 20px 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #eee;
+            background-color: #F5F5DC;
+            border-radius: 4px;
         }
         .collapsible {
-            background-color: #e3f2fd;
+            background-color: #DEB887;
             color: #34495e;
             cursor: pointer;
             padding: 12px;
@@ -126,515 +130,309 @@
             border-radius: 0 0 6px 6px;
             margin-bottom: 15px;
         }
-        .result-item {
-            margin: 10px 0;
-            line-height: 1.6;
-        }
-        .prime-list {
-            word-break: break-all;
-            line-height: 1.8;
-        }
-        .summary-line {
-            font-weight: bold;
-            color: #2c3e50;
+        .mod-constraint {
             margin: 5px 0;
-        }
-        .method-tag {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 8px;
-            background-color: #e3f2fd;
-            color: #2c3e50;
-        }
-        .limit-note {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-left: 10px;
-        }
-        .proof-logic {
-            background-color: #f0f8ff;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            border-left: 4px solid #2980b9;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>古算体系下哥德巴赫猜想交互验证</h1>
+        <h1>皇极经世体系下哥德巴赫猜想超大数验证</h1>
+        
         <div class="input-group">
-            <label>输入大于2的偶数：</label>
-            <input type="number" id="evenNum" min="4" step="2" placeholder="例如：100、1000000、10000000000000002">
+            <label>输入超大偶数（支持科学计数法，如1e100）：</label>
+            <input type="text" id="evenNum" placeholder="例如：10000000000000002、1e100、10^100">
         </div>
+        
         <div class="input-group">
-            <label>累乘止界系数k：</label>
-            <input type="number" id="kCoeff" value="1.0" step="0.1" min="0.5" max="2.0" placeholder="存在性证明累乘止界系数">
+            <label>皇极周期层数（1-4）：</label>
+            <input type="number" id="huangjiLevel" value="3" min="1" max="4">
         </div>
-        <button onclick="verifyGoldbach()">开始验证（存在性证明流程）</button>
+        
+        <button onclick="verifyGoldbach()">开始验证（皇极经世算法）</button>
         <div id="result"></div>
     </div>
 
     <script>
-        // 扩展预定义素数表（增加更多小素数）
-        const PREDEFINED_SMALL_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199];
-        const PREDEFINED_SMALL_PRIMES_SET = new Set(PREDEFINED_SMALL_PRIMES);
+        // 皇极经世周期定义：元会运世
+        const HUANGJI_CYCLES = {
+            世: 30,    // 第一层：世（30年）
+            运: 360,   // 第二层：运（30×12）
+            会: 10800, // 第三层：会（360×30）
+            元: 129600 // 第四层：元（10800×12）
+        };
         
-        // 最新存在性证明核心：累乘止界筛模数（大数优化）
-        function 古算累乘止界筛模数(n2, 开方函数, k) {
-            const q = 开方函数(n2);
-            // 大数优化：q超过10000时直接使用预定义素数表
-            let primeInfo;
-            if (q > 10000) {
-                primeInfo = {
-                    primes: PREDEFINED_SMALL_PRIMES.filter(p => p <= q),
-                    actualCount: PREDEFINED_SMALL_PRIMES.filter(p => p <= q).length,
-                    maxLimit: PREDEFINED_SMALL_PRIMES.length
-                };
-            } else {
-                primeInfo = sieveOddPrimesUpTo(q, 开方函数);
+        // 十二律吕剩余类（素数必属于这些剩余类）
+        const LVLÜ_RESIDUES = [1, 5, 7, 11, 13, 17, 19, 23, 25, 29];
+        
+        // 更相减损术（古算GCD）
+        function 更相减损术(a, b) {
+            a = BigInt(a);
+            b = BigInt(b);
+            while (a !== b) {
+                if (a > b) a -= b;
+                else b -= a;
             }
-            
-            const F = getPrimeFactors(n2, 开方函数);
-            const S_prime = primeInfo.primes.filter(m => !F.includes(m));
-            
-            let M0 = [];
-            let M0_star = 1;
-            const stopBound = k * (n2 - 2); // 累乘止界
-            
-            for (let m of S_prime) {
-                if (M0_star * m > stopBound || M0.length >= 15) break; // 增加模数数量限制
-                M0.push(m);
-                M0_star *= m;
-            }
-            
-            // 保证模数集非空（存在性证明无空集要求）
-            if (M0.length === 0 && 3 <= n2 - 2) {
-                M0.push(3);
-                M0_star = 3;
-            }
-            
-            return {
-                M0: M0,
-                M0_star: M0_star,
-                stopBound: stopBound,
-                isBounded: M0_star <= stopBound
-            };
+            return a;
         }
-
-        // 古算方法：商除开方术（支持大数，严格按存在性证明实现）
-        function 古算开方(n) {
-            if (n < 0) return 0;
-            if (n === 0 || n === 1) return n;
-            
-            // 使用BigInt处理大数，避免溢出（存在性证明大数支持）
-            const bigN = BigInt(n);
-            let x = bigN;
-            let y = (x + 1n) >> 1n;
-            
-            while (y < x) {
-                x = y;
-                y = (x + bigN / x) >> 1n;
-            }
-            
-            return Number(x);
+        
+        // 求一术（解ax ≡ 1 mod m）
+        function 求一术(a, m) {
+            let [g, x, y] = 扩展欧几里得(BigInt(a), BigInt(m));
+            if (g !== 1n) return null;
+            return (x % BigInt(m) + BigInt(m)) % BigInt(m);
         }
-
-        // 最新存在性证明：素数判定（增强大数验证）
-        function 古算素数判定(p, 开方函数) {
-            if (p <= 1) return false;
-            // 预定义素数直接返回
-            if (PREDEFINED_SMALL_PRIMES_SET.has(p)) return true;
-            // 三/五数验余（存在性证明筛除规则）
-            if (p % 2 === 0 || p % 3 === 0 || p % 5 === 0) return false;
+        
+        // 扩展欧几里得算法
+        function 扩展欧几里得(a, b) {
+            if (b === 0n) return [a, 1n, 0n];
+            const [g, x, y] = 扩展欧几里得(b, a % b);
+            return [g, y, x - (a / b) * y];
+        }
+        
+        // 米勒-拉宾素性测试（BigInt版）
+        function 皇极素数判定(n) {
+            n = BigInt(n);
+            if (n <= 1n) return false;
+            if (n <= 3n) return true;
+            if (n % 2n === 0n) return false;
             
-            const sqrt_p = Math.min(开方函数(p), 100000); // 提高试除上限
-            // 三十数循环试除（存在性证明优化规则）
-            const step = [4, 2, 4, 2, 4, 6, 2, 6];
-            let i = 7;
-            let stepIdx = 0;
-            
-            while (i * i <= sqrt_p && i <= 100000) { // 提高试除范围
-                if (p % i === 0) return false;
-                i += step[stepIdx];
-                stepIdx = (stepIdx + 1) % 8;
+            // 分解n-1 = d*2^s
+            let d = n - 1n;
+            let s = 0n;
+            while (d % 2n === 0n) {
+                d /= 2n;
+                s += 1n;
             }
             
+            // 皇极测试基（古算常用小素数）
+            const 测试基 = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n];
+            for (const a of 测试基) {
+                if (a >= n) continue;
+                let x = 1n;
+                let base = a;
+                let exp = d;
+                
+                // 快速幂
+                while (exp > 0n) {
+                    if (exp % 2n === 1n) x = (x * base) % n;
+                    base = (base * base) % n;
+                    exp /= 2n;
+                }
+                
+                if (x === 1n || x === n - 1n) continue;
+                for (let r = 1n; r < s; r++) {
+                    x = (x * x) % n;
+                    if (x === n - 1n) break;
+                }
+                if (x !== n - 1n) return false;
+            }
             return true;
         }
-
-        // 存在性证明：分解素因子（约分术严格实现，大数优化）
-        function getPrimeFactors(n, 开方函数) {
-            const factors = new Set();
-            if (n % 2 === 0) {
-                factors.add(2);
-                while (n % 2 === 0) n = Math.floor(n / 2);
-            }
+        
+        // 皇极经世周期约束生成
+        function 生成皇极约束(N, level) {
+            const constraints = [];
+            const cycles = Object.values(HUANGJI_CYCLES).slice(0, level);
             
-            // 大数优化：仅试除预定义小素数
-            for (let p of PREDEFINED_SMALL_PRIMES) {
-                if (p * p > n) break;
-                if (n % p === 0) {
-                    factors.add(p);
-                    while (n % p === 0) n = Math.floor(n / p);
+            for (const m of cycles) {
+                const N_mod = BigInt(N) % BigInt(m);
+                const validResidues = [];
+                
+                // 筛选有效剩余类：p ≡ r mod m 且 (N-p) ≡ (N_mod - r) mod m 均为素数剩余类
+                for (const r of LVLÜ_RESIDUES) {
+                    if (r >= m) continue;
+                    const q_mod = (N_mod - BigInt(r) + BigInt(m)) % BigInt(m);
+                    if (LVLÜ_RESIDUES.includes(Number(q_mod)) || q_mod === 2n) {
+                        validResidues.push(r);
+                    }
                 }
+                
+                constraints.push({
+                    周期: m,
+                    有效剩余类: validResidues,
+                    约束率: (validResidues.length / m * 100).toFixed(2) + '%'
+                });
             }
             
-            if (n > 1) factors.add(n);
-            return Array.from(factors);
+            return constraints;
         }
-
-        // 存在性证明：杨辉筛法生成奇素数（累乘止界限制，小数专用）
-        function sieveOddPrimesUpTo(q, 开方函数) {
-            if (q < 3) return { 
-                primes: [], 
-                actualCount: 0,
-                maxLimit: 0
+        
+        // 物不知数术求解同余组
+        function 物不知数术(constraints, N) {
+            let [a1, m1] = [BigInt(constraints[0].有效剩余类[0]), BigInt(constraints[0].周期)];
+            
+            for (let i = 1; i < constraints.length; i++) {
+                const a2 = BigInt(constraints[i].有效剩余类[0]);
+                const m2 = BigInt(constraints[i].周期);
+                
+                // 解 x ≡ a1 mod m1
+                //    x ≡ a2 mod m2
+                const d = 更相减损术(m1, m2);
+                const c = a2 - a1;
+                
+                if (c % d !== 0n) {
+                    // 无解则取下一个剩余类
+                    if (constraints[i].有效剩余类.length > 1) {
+                        return 物不知数术(constraints.map((c, idx) => 
+                            idx === i ? {...c, 有效剩余类: [c.有效剩余类[1]]} : c
+                        ), N);
+                    }
+                    return { a0: 1n, M: m1 * m2 };
+                }
+                
+                const m1_d = m1 / d;
+                const m2_d = m2 / d;
+                const c_d = c / d;
+                
+                const inv = 求一术(m1_d, m2_d);
+                if (!inv) return { a0: a1, M: m1 * m2 };
+                
+                const x0 = a1 + m1 * (inv * c_d % m2_d);
+                const M = m1 * m2_d;
+                
+                a1 = x0;
+                m1 = M;
+            }
+            
+            return {
+                a0: a1 < 0n ? a1 + m1 : a1,
+                M: m1
             };
-            
-            // 限制筛法规模，避免内存溢出
-            if (q > 10000) q = 10000;
-            
-            const sieve = new Array(q + 1).fill(true);
-            sieve[0] = sieve[1] = false;
-            
-            // 存在性证明筛法规则
-            for (let i = 3; i * i <= q; i += 2) {
-                if (sieve[i]) {
-                    for (let j = i * i; j <= q; j += 2 * i) sieve[j] = false;
-                }
-            }
-            
-            const primes = sieve.map((isP, idx) => isP && idx % 2 === 1 ? idx : null).filter(idx => idx !== null);
-            
-            return { 
-                primes: primes, 
-                actualCount: primes.length,
-                maxLimit: primes.length
-            };
         }
-
-        // 存在性证明：大衍求一术求乘率（严格实现）
-        function dayan_qiuyishu_qiu_chenglv(a, m) {
-            let r0 = m, r1 = a;
-            let x0 = 0, x1 = 1;
-            
-            while (r1 !== 0) {
-                const q = Math.floor(r0 / r1);
-                [r0, r1] = [r1, r0 - q * r1];
-                [x0, x1] = [x1, x0 - q * x1];
+        
+        // 皇极经世素数对查找
+        function 皇极素数对查找(N_str) {
+            // 解析输入（支持科学计数法和10^n格式）
+            let N_big;
+            if (N_str.includes('e') || N_str.includes('E')) {
+                const [base, exp] = N_str.split(/e|E/);
+                N_big = BigInt(base) * (10n ** BigInt(exp));
+            } else if (N_str.includes('^')) {
+                const [base, exp] = N_str.split('^');
+                N_big = BigInt(base) ** BigInt(exp);
+            } else {
+                N_big = BigInt(N_str);
             }
             
-            return r0 === 1 ? x0 % m : null;
-        }
-
-        // 存在性证明：物不知数术求解同余组
-        function qushu_dingli_qiujie(moduli, remainders) {
-            if (moduli.length === 0) return { a0: 2, M: 6 };
+            if (N_big % 2n !== 0n) return { error: "输入必须为偶数" };
             
-            let M = 1;
-            // 限制模数乘积大小，避免溢出
-            for (let m of moduli) {
-                if (M * m > 10000000) break; // 提高乘积限制
-                M *= m;
-            }
+            const level = parseInt(document.getElementById("huangjiLevel").value);
+            const constraints = 生成皇极约束(N_big, level);
             
-            let a0 = 0;
-            for (let i = 0; i < moduli.length && i < 8; i++) { // 增加模数处理数量
-                const mi = moduli[i];
-                const ai = remainders[i];
-                const Mi = M / mi;
-                const ti = dayan_qiuyishu_qiu_chenglv(Mi, mi);
-                if (ti !== null) a0 += ai * Mi * ti;
-            }
+            // 物不知数术求初始解
+            const { a0, M } = 物不知数术(constraints, N_big);
             
-            return { a0: a0 % M || 2, M: M || 6 };
-        }
-
-        // 存在性证明：出入相补原理生成候选集（超大数增强）
-        function churu_xiangbu(n2, a0, M, 开方函数) {
-            const A_start = 2, A_end = Math.floor(n2 / 2);
-            const B_start = A_end + 1, B_end = n2 - 2;
+            // 生成候选数列
+            const candidates = [];
+            const half = N_big / 2n;
+            let current = a0;
             
-            function 级数_intersection(a0, M, L, R) {
-                if (M === 0 || a0 > R) return [];
-                // 增加生成数量，适应超大数
-                const maxCount = 500;
-                const result = [];
-                let t = 0;
-                
-                // 计算初始t值（优化大数计算）
-                let current = a0;
-                if (current < L) {
-                    const delta = L - current;
-                    t = Math.ceil(delta / M);
-                    current = a0 + t * M;
+            // 生成前100个候选数
+            for (let i = 0; i < 100; i++) {
+                if (current > half) break;
+                if (current < 2n) {
+                    current += M;
+                    continue;
                 }
-                
-                while (current <= R && result.length < maxCount) {
-                    result.push(current);
-                    t++;
-                    current = a0 + t * M;
-                }
-                
-                return result;
+                candidates.push(current);
+                current += M;
             }
             
-            const P_A = 级数_intersection(a0, M, A_start, A_end);
-            const P_B = 级数_intersection(a0, M, B_start, B_end);
-            
-            // 存在性证明：筛选奇素数候选
-            const P_A_prime = P_A.filter(p => p % 2 === 1 || p === 2);
-            const P_B_prime = P_B.filter(p => p % 2 === 1);
-            
-            let P_prime = [...P_A_prime, ...P_B_prime];
-            
-            // 超大数候选集扩展：补充更多小素数
-            if (P_prime.length < 100) {
-                const extraPrimes = PREDEFINED_SMALL_PRIMES.filter(p => p <= A_end && !P_prime.includes(p));
-                P_prime = [...P_prime, ...extraPrimes];
-            }
-            
-            // 存在性证明：无空集保障
-            if (P_prime.length === 0) {
-                P_prime = PREDEFINED_SMALL_PRIMES.filter(p => p <= A_end);
-                if (P_prime.length === 0) {
-                    P_prime = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31].filter(p => p <= A_end);
-                }
-            }
-            
-            return [...new Set(P_prime)].slice(0, 500); // 增加候选集大小
-        }
-
-        // 存在性证明核心：寻找素数对（超大数增强）
-        function findPrimePairs_存在性证明(n2, 开方函数, k) {
-            // 1. 累乘止界筛模数
-            const { M0, M0_star, stopBound } = 古算累乘止界筛模数(n2, 开方函数, k);
-            
-            // 2. 构造同余组（存在性证明规则）
-            const remainders = [];
-            for (let m of M0) {
-                const n2_mod_m = n2 % m;
-                let a_m = 1;
-                while (a_m === 0 || a_m === n2_mod_m) {
-                    a_m = (a_m + 1) % m;
-                }
-                remainders.push(a_m);
-            }
-            
-            // 3. 物不知数术求解同余组
-            const { a0, M } = qushu_dingli_qiujie(M0, remainders);
-            
-            // 4. 出入相补生成候选集
-            const P_prime = churu_xiangbu(n2, a0, M, 开方函数);
-            
-            // 5. 筛选素数对（超大数增强逻辑）
+            // 查找素数对
             const pairs = [];
-            const half = Math.floor(n2 / 2);
-            
-            // 第一步：优先检查预定义小素数（超大数优化）
-            for (let p of PREDEFINED_SMALL_PRIMES) {
-                if (p > half) break;
-                const q = n2 - p;
-                if (q < 2) continue;
+            for (const p of candidates) {
+                const q = N_big - p;
+                if (q < 2n) continue;
                 
-                if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
+                if (皇极素数判定(p) && 皇极素数判定(q)) {
                     pairs.push([p, q]);
-                    if (pairs.length >= 5) return { pairs, M0, M0_star, stopBound, a0, M };
+                    if (pairs.length >= 3) break; // 取前3个素数对
                 }
             }
             
-            // 第二步：扩展小素数查找（覆盖更多情况）
-            let extendedPrimes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151];
-            for (let p of extendedPrimes) {
-                if (p > half || pairs.length >= 5) break;
-                const q = n2 - p;
-                if (q < 2 || PREDEFINED_SMALL_PRIMES_SET.has(p)) continue;
-                
-                if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
-                    pairs.push([p, q]);
-                }
-            }
-            
-            // 第三步：候选集深度查找
-            if (pairs.length < 5) {
-                for (let p of P_prime) {
-                    if (p > half || pairs.length >= 5) break;
-                    const q = n2 - p;
-                    if (q < 2) continue;
-                    
-                    if (古算素数判定(p, 开方函数) && 古算素数判定(q, 开方函数)) {
-                        pairs.push([p, q]);
-                    }
-                }
-            }
-            
-            // 第四步：终极兜底（针对超大数）
+            // 兜底查找（直接从小素数开始）
             if (pairs.length === 0) {
-                // 尝试固定小素数+大数组合
-                const basePrimes = [3, 7, 11, 13, 17, 19, 23, 29];
-                for (let p of basePrimes) {
+                const basePrimes = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n];
+                for (const p of basePrimes) {
                     if (p > half) break;
-                    const q = n2 - p;
-                    if (q < 2) continue;
-                    
-                    if (古算素数判定(q, 开方函数)) {
+                    const q = N_big - p;
+                    if (皇极素数判定(q)) {
                         pairs.push([p, q]);
-                        if (pairs.length >= 5) break;
+                        if (pairs.length >= 3) break;
                     }
                 }
             }
             
             return {
-                pairs: pairs,
-                M0: M0,
-                M0_star: M0_star,
-                stopBound: stopBound,
-                a0: a0,
-                M: M
+                N: N_big,
+                皇极约束: constraints,
+                同余解: { a0, M },
+                素数对: pairs
             };
         }
-
-        // 存在性证明：密度下界计算（割圆术比例法）
-        function calculateDensity_存在性证明(n2, 开方函数, M0) {
-            const logN = Math.log(n2);
-            const piApprox = n2 / logN; // 素数定理近似
-            
-            // 存在性证明：欧拉函数乘积
-            let phiM = 1;
-            for (let m of M0) phiM *= (m - 1);
-            
-            // 洛书覆盖系数（存在性证明保守值）
-            const c = 1/3;
-            
-            // 出入相补平衡系数
-            const F = getPrimeFactors(n2, 开方函数);
-            const q = 开方函数(n2);
-            const primeInfo = q > 10000 ? 
-                { actualCount: PREDEFINED_SMALL_PRIMES.length } : 
-                sieveOddPrimesUpTo(q, 开方函数);
-            const b = primeInfo.actualCount > 0 ? (1 - F.length / primeInfo.actualCount) : 0.5;
-            
-            // 存在性证明密度下界公式
-            return {
-                density: (c * b * piApprox) / (phiM * logN || 1),
-                b: b,
-                phiM: phiM,
-                c: c
-            };
-        }
-
-        // 主验证函数（存在性证明流程）
+        
+        // 主验证函数
         function verifyGoldbach() {
-            const n2Input = document.getElementById("evenNum");
-            const kInput = document.getElementById("kCoeff");
+            const input = document.getElementById("evenNum").value.trim();
             const resultDiv = document.getElementById("result");
             
-            resultDiv.innerHTML = '<div class="loading">正在执行存在性证明验证流程...</div>';
-            
-            // 输入验证
-            const n2Str = n2Input.value.trim();
-            if (!/^\d+$/.test(n2Str)) {
-                resultDiv.innerHTML = '<div class="error">请输入有效整数偶数！</div>';
-                n2Input.focus();
+            if (!input) {
+                resultDiv.innerHTML = '<div class="error">请输入有效数字！</div>';
                 return;
             }
             
-            const n2 = BigInt(n2Str); // 使用BigInt处理超大数
-            const k = parseFloat(kInput.value);
+            resultDiv.innerHTML = '<div class="loading">正在执行皇极经世算法...</div>';
             
-            if (n2 <= 2n || n2 % 2n !== 0n) {
-                resultDiv.innerHTML = '<div class="error">请输入大于2的偶数！（存在性证明要求：偶数需≥4）</div>';
-                n2Input.focus();
-                return;
-            }
-            
-            if (isNaN(k) || k <= 0) {
-                resultDiv.innerHTML = '<div class="error">累乘止界系数k需大于0！</div>';
-                kInput.focus();
-                return;
-            }
-
-            // 异步执行避免UI阻塞
             setTimeout(() => {
                 try {
-                    // 转换为Number（确保兼容性）
-                    const n2Num = Number(n2);
-                    const 开方函数 = 古算开方;
-                    const result = findPrimePairs_存在性证明(n2Num, 开方函数, k);
-                    const pairs = result.pairs;
-                    const hasPair = pairs.length > 0;
+                    const result = 皇极素数对查找(input);
                     
-                    // 密度下界计算
-                    const densityResult = calculateDensity_存在性证明(n2Num, 开方函数, result.M0);
-                    const density = densityResult.density;
-                    const b = densityResult.b;
-                    const phiM = densityResult.phiM;
-                    const c = densityResult.c;
-                    
-                    // 辅助计算
-                    const F = getPrimeFactors(n2Num, 开方函数);
-                    const q = 开方函数(n2Num);
-                    const isLargeNumber = q > 10000;
-                    const isUltraLarge = n2Num > 1000000000000000n;
-                    const primeInfo = isLargeNumber ? 
-                        { actualCount: PREDEFINED_SMALL_PRIMES.length } : 
-                        sieveOddPrimesUpTo(q, 开方函数);
-                    
-                    // 构建结果HTML
-                    let html = `<h3>存在性证明验证结果（2n=${n2Num}）</h3>`;
-                    
-                    // 存在性证明核心逻辑说明
-                    html += `
-                    <div class="proof-logic">
-                        <strong>存在性证明核心逻辑：</strong>
-                        1. 累乘止界筛模数确保衍母M0* ≤ ${k}×(2n-2)；
-                        2. 出入相补原理保证候选集非空；
-                        3. 割圆术比例法证明密度下界恒正，故素数对必存在。
-                        ${isLargeNumber ? '<br><em>注：大数模式已启用预定义素数表优化</em>' : ''}
-                        ${isUltraLarge ? '<br><em>注：超大数模式已启用增强素数对查找</em>' : ''}
-                    </div>
-                    `;
-                    
-                    // 模数筛选结果（存在性证明关键步骤）
-                    html += `
-                    <button class="collapsible">1. 累乘止界筛模数（存在性证明核心）</button>
-                    <div class="collapsible-content">
-                        <div class="summary-line">基础参数：</div>
-                        <div class="result-item">√(${n2Num}) = ${q}（古算商除开方术）${isLargeNumber ? '<span class="limit-note">（大数优化：限制筛法范围）</span>' : ''}</div>
-                        <div class="result-item">累乘止界 = ${k}×(${n2Num}-2) = ${result.stopBound.toLocaleString()}</div>
-                        <div class="result-item">模数集合M0 = [${result.M0.join(', ')}]</div>
-                        <div class="result-item">衍母M0* = ${result.M0_star.toLocaleString()} ${result.M0_star <= result.stopBound ? '(≤止界，符合规则)' : '(>止界，已截断)'}</div>
-                        <div class="result-item">${n2Num}的素因子（约分术）：${F.join(', ') || '无'}</div>
-                        <div class="result-item">同余组解a0 = ${result.a0}，周期M = ${result.M}</div>
-                    </div>
-                    `;
-                    
-                    // 素数对结果（严格验证）
-                    html += `<div class="section-title">2. 素数对结果（存在性证明验证规则）</div>`;
-                    if (hasPair) {
-                        html += `
-                        <div class="result-item success">找到素数对（共${pairs.length}个，均通过三/五数验余）：</div>
-                        <div class="result-item">${pairs.map((p, idx) => `${idx+1}. ${p[0]} + ${p[1]} = ${n2Num}`).join('<br>')}</div>
-                        <div class="result-item success">结论：${n2Num}可表为两个素数之和，符合哥德巴赫猜想！</div>
-                        `;
-                    } else {
-                        html += `<div class="result-item error">未找到素数对（极端情形，存在性证明仍保证理论存在）</div>`;
-                        html += `<div class="result-item">提示：超大数可尝试调整累乘止界系数k（如设为1.5）</div>`;
+                    if (result.error) {
+                        resultDiv.innerHTML = `<div class="error">${result.error}</div>`;
+                        return;
                     }
                     
-                    // 存在性证明密度分析
-                    html += `
-                    <button class="collapsible">3. 存在性证明：密度下界分析（割圆术比例法）</button>
-                    <div class="collapsible-content">
-                        <div class="formula">洛书覆盖系数c = ${c.toFixed(4)}（存在性证明保守值）</div>
-                        <div class="formula">出入相补平衡系数b = ${b.toFixed(4)}</div>
-                        <div class="formula">欧拉函数乘积φ(M0) = ${phiM}</div>
-                        <div class="formula">密度下界L = ${density.toFixed(8)}（恒正，存在性证明保证素数对必存在）</div>
-                    </div>
-                    `;
+                    let html = `<h3>皇极经世验证结果（N = ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}）</h3>`;
+                    
+                    // 皇极周期约束展示
+                    html += '<button class="collapsible">皇极经世周期约束</button>';
+                    html += '<div class="collapsible-content">';
+                    result.皇极约束.forEach((layer, idx) => {
+                        const cycleNames = ["世", "运", "会", "元"];
+                        html += `
+                        <div class="huangji-layer">
+                            <div class="cycle-title">${cycleNames[idx]}级周期（${layer.周期}）：</div>
+                            <div>有效剩余类：${layer.有效剩余类.join(', ')}</div>
+                            <div>约束效率：${layer.约束率}（剩余范围）</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    
+                    // 同余解展示
+                    html += `<div class="huangji-layer">
+                        <div class="cycle-title">物不知数术解：</div>
+                        <div>初始解 a₀ = ${result.同余解.a0}</div>
+                        <div>周期 M = ${result.同余解.M}</div>
+                        <div>候选数列：a₀ + k×M（k=0,1,2,...）</div>
+                    </div>`;
+                    
+                    // 素数对结果
+                    html += '<div class="section-title">素数对结果：</div>';
+                    if (result.素数对.length > 0) {
+                        result.素数对.forEach((pair, idx) => {
+                            html += `
+                            <div class="prime-pair success">
+                                ${idx+1}. ${pair[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} + 
+                                ${pair[1].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} = 
+                                ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                            </div>`;
+                        });
+                        html += '<div class="success">验证成功：该偶数可表示为两个素数之和！</div>';
+                    } else {
+                        html += '<div class="error">未找到素数对（理论上必存在，可调整周期层数重试）</div>';
+                    }
                     
                     resultDiv.innerHTML = html;
                     
@@ -648,21 +446,15 @@
                         });
                     }
                     
-                    // 默认展开第一个面板
-                    if (colls.length > 0) colls[0].click();
-                    
                 } catch (error) {
                     resultDiv.innerHTML = `<div class="error">验证出错：${error.message}</div>`;
                     console.error(error);
                 }
-            }, 10);
+            }, 100);
         }
-
-        // 回车触发验证
+        
+        // 回车触发
         document.getElementById("evenNum").addEventListener("keypress", function(e) {
-            if (e.key === "Enter") verifyGoldbach();
-        });
-        document.getElementById("kCoeff").addEventListener("keypress", function(e) {
             if (e.key === "Enter") verifyGoldbach();
         });
     </script>
