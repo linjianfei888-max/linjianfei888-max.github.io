@@ -146,13 +146,13 @@
         <h1>纯古算体系-皇极经世哥德巴赫验证</h1>
         
         <div class="input-group">
-            <label>输入超大偶数（支持科学计数法）：</label>
-            <input type="text" id="evenNum" placeholder="例如：1e30+2、10000000000000002">
+            <label>输入超大偶数：</label>
+            <input type="text" id="evenNum" placeholder="例如：10000000000000002、1000000002" value="1000000002">
         </div>
         
         <div class="input-group">
             <label>皇极周期层数（1-4）：</label>
-            <input type="number" id="huangjiLevel" value="3" min="1" max="4">
+            <input type="number" id="huangjiLevel" value="2" min="1" max="4">
         </div>
         
         <button onclick="verifyGoldbach()">开始验证（纯古算算法）</button>
@@ -176,8 +176,11 @@
             a = BigInt(a);
             b = BigInt(b);
             while (a !== b) {
-                if (a > b) a -= b;
-                else b -= a;
+                if (a > b) {
+                    a -= b;
+                } else {
+                    b -= a;
+                }
             }
             return a;
         }
@@ -235,9 +238,12 @@
         
         // 扩展欧几里得算法（古算递互除之）
         function 扩展欧几里得(a, b) {
-            if (b === 0n) return [a, 1n, 0n];
-            const [g, x, y] = 扩展欧几里得(b, a % b);
-            return [g, y, x - (a / b) * y];
+            if (b === 0n) {
+                return [a, 1n, 0n];
+            } else {
+                const [g, x, y] = 扩展欧几里得(b, a % b);
+                return [g, y, x - (a / b) * y];
+            }
         }
         
         // 古算素性验证（费马小定理+更相减损术）
@@ -260,14 +266,10 @@
                 }
             }
             
-            // 割圆术密度验证（素数密度>0则判定为素数）
-            const 平方根 = BigInt(Math.sqrt(Number(p)));
-            const 密度 = 平方根 / p;
-            if (密度 < 0.000001n) return true;
-            
             // 最终验证：试除到平方根（古算“少广术”）
+            const 平方根 = BigInt(Math.sqrt(Number(p)));
             let i = 17n;
-            while (i * i <= p) {
+            while (i <= 平方根) {
                 if (p % i === 0n) return false;
                 i += 2n;
             }
@@ -350,76 +352,64 @@
         
         // 皇极经世素数对查找（纯古算）
         function 皇极素数对查找(N_str) {
-            // 解析输入（支持科学计数法和10^n格式）
-            let N_big;
-            if (N_str.includes('e') || N_str.includes('E')) {
-                const [base, exp] = N_str.split(/e|E/);
-                N_big = BigInt(base) * (10n ** BigInt(exp));
-            } else if (N_str.includes('^')) {
-                const [base, exp] = N_str.split('^');
-                N_big = BigInt(base) ** BigInt(exp);
-            } else if (N_str.includes('+')) {
-                const parts = N_str.split('+');
-                N_big = parts.reduce((a, b) => BigInt(a) + BigInt(b));
-            } else {
-                N_big = BigInt(N_str);
-            }
-            
-            if (N_big % 2n !== 0n) return { error: "输入必须为偶数" };
-            
-            const level = parseInt(document.getElementById("huangjiLevel").value);
-            const constraints = 生成皇极约束(N_big, level);
-            
-            // 物不知数术求初始解
-            const { a0, M } = 物不知数术(constraints, N_big);
-            
-            // 生成候选数列（皇极周期数列）
-            const candidates = [];
-            const half = N_big / 2n;
-            let current = a0;
-            
-            // 生成前200个候选数（古算“缀术”）
-            for (let i = 0; i < 200; i++) {
-                if (current > half) break;
-                if (current < 2n) {
-                    current += M;
-                    continue;
+            try {
+                // 解析输入（简化处理，避免复杂格式问题）
+                let N_big;
+                if (N_str.includes('e') || N_str.includes('E')) {
+                    const parts = N_str.split(/e|E/);
+                    N_big = BigInt(parts[0]) * (10n ** BigInt(parts[1]));
+                } else {
+                    N_big = BigInt(N_str);
                 }
-                candidates.push(current);
-                current += M;
-            }
-            
-            // 查找素数对（古算“盈不足术”思想）
-            const pairs = [];
-            for (const p of candidates) {
-                const q = N_big - p;
-                if (q < 2n) continue;
                 
-                if (古算素性验证(p) && 古算素性验证(q)) {
-                    pairs.push([p, q]);
-                    if (pairs.length >= 3) break; // 取前3个素数对
+                if (N_big % 2n !== 0n) return { error: "输入必须为偶数" };
+                
+                const level = parseInt(document.getElementById("huangjiLevel").value) || 2;
+                const constraints = 生成皇极约束(N_big, level);
+                
+                // 物不知数术求初始解
+                const { a0, M } = 物不知数术(constraints, N_big);
+                
+                // 生成候选数列（皇极周期数列）
+                const candidates = [];
+                const half = N_big / 2n;
+                let current = a0;
+                
+                // 生成前100个候选数
+                for (let i = 0; i < 100; i++) {
+                    if (current > half) break;
+                    if (current < 2n) {
+                        current += M;
+                        continue;
+                    }
+                    candidates.push(current);
+                    current += M;
                 }
-            }
-            
-            // 兜底查找（古算“枚举术”）
-            if (pairs.length === 0) {
-                const basePrimes = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n];
-                for (const p of basePrimes) {
-                    if (p > half) break;
+                
+                // 兜底候选：加入小素数
+                candidates.unshift(2n, 3n, 5n, 7n, 11n);
+                
+                // 查找素数对
+                const pairs = [];
+                for (const p of candidates) {
                     const q = N_big - p;
-                    if (古算素性验证(q)) {
+                    if (q < 2n) continue;
+                    
+                    if (古算素性验证(p) && 古算素性验证(q)) {
                         pairs.push([p, q]);
                         if (pairs.length >= 3) break;
                     }
                 }
+                
+                return {
+                    N: N_big,
+                    皇极约束: constraints,
+                    同余解: { a0, M },
+                    素数对: pairs
+                };
+            } catch (e) {
+                return { error: "解析错误：" + e.message };
             }
-            
-            return {
-                N: N_big,
-                皇极约束: constraints,
-                同余解: { a0, M },
-                素数对: pairs
-            };
         }
         
         // 主验证函数
@@ -434,72 +424,72 @@
             
             resultDiv.innerHTML = '<div class="loading">正在执行纯古算算法...</div>';
             
-            setTimeout(() => {
-                try {
-                    const result = 皇极素数对查找(input);
-                    
-                    if (result.error) {
-                        resultDiv.innerHTML = `<div class="error">${result.error}</div>`;
-                        return;
-                    }
-                    
-                    let html = `<h3>纯古算验证结果（N = ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}）</h3>`;
-                    
-                    // 皇极周期约束展示
-                    html += '<button class="collapsible">皇极经世周期约束 <span class="gusuan-tag">元会运世</span></button>';
-                    html += '<div class="collapsible-content">';
-                    result.皇极约束.forEach((layer, idx) => {
-                        const cycleNames = ["世", "运", "会", "元"];
+            // 立即执行（移除setTimeout避免延迟问题）
+            try {
+                const result = 皇极素数对查找(input);
+                
+                if (result.error) {
+                    resultDiv.innerHTML = `<div class="error">${result.error}</div>`;
+                    return;
+                }
+                
+                let html = `<h3>纯古算验证结果（N = ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}）</h3>`;
+                
+                // 皇极周期约束展示
+                html += '<button class="collapsible" onclick="toggleCollapse(this)">皇极经世周期约束 <span class="gusuan-tag">元会运世</span></button>';
+                html += '<div class="collapsible-content">';
+                result.皇极约束.forEach((layer, idx) => {
+                    const cycleNames = ["世", "运", "会", "元"];
+                    html += `
+                    <div class="huangji-layer">
+                        <div class="cycle-title">${cycleNames[idx]}级周期（${layer.周期}）：</div>
+                        <div>有效剩余类：${layer.有效剩余类.join(', ')}</div>
+                        <div>约束效率：${layer.约束率}（剩余范围）</div>
+                    </div>`;
+                });
+                html += '</div>';
+                
+                // 物不知数术解展示
+                html += `<div class="huangji-layer">
+                    <div class="cycle-title">物不知数术解 <span class="gusuan-tag">孙子算经</span>：</div>
+                    <div>初始解 a₀ = ${result.同余解.a0}</div>
+                    <div>周期 M = ${result.同余解.M}</div>
+                    <div>候选数列：a₀ + k×M（k=0,1,2,...）</div>
+                </div>`;
+                
+                // 素数对结果
+                html += '<div class="section-title">素数对结果 <span class="gusuan-tag">古算素性验证</span>：</div>';
+                if (result.素数对.length > 0) {
+                    result.素数对.forEach((pair, idx) => {
                         html += `
-                        <div class="huangji-layer">
-                            <div class="cycle-title">${cycleNames[idx]}级周期（${layer.周期}）：</div>
-                            <div>有效剩余类：${layer.有效剩余类.join(', ')}</div>
-                            <div>约束效率：${layer.约束率}（剩余范围）</div>
+                        <div class="prime-pair success">
+                            ${idx+1}. ${pair[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} + 
+                            ${pair[1].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} = 
+                            ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                         </div>`;
                     });
-                    html += '</div>';
-                    
-                    // 物不知数术解展示
-                    html += `<div class="huangji-layer">
-                        <div class="cycle-title">物不知数术解 <span class="gusuan-tag">孙子算经</span>：</div>
-                        <div>初始解 a₀ = ${result.同余解.a0}</div>
-                        <div>周期 M = ${result.同余解.M}</div>
-                        <div>候选数列：a₀ + k×M（k=0,1,2,...）</div>
-                    </div>`;
-                    
-                    // 素数对结果
-                    html += '<div class="section-title">素数对结果 <span class="gusuan-tag">古算素性验证</span>：</div>';
-                    if (result.素数对.length > 0) {
-                        result.素数对.forEach((pair, idx) => {
-                            html += `
-                            <div class="prime-pair success">
-                                ${idx+1}. ${pair[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} + 
-                                ${pair[1].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} = 
-                                ${result.N.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                            </div>`;
-                        });
-                        html += '<div class="success">验证成功：该偶数可表示为两个素数之和！</div>';
-                    } else {
-                        html += '<div class="error">未找到素数对（理论上必存在，可调整周期层数重试）</div>';
-                    }
-                    
-                    resultDiv.innerHTML = html;
-                    
-                    // 初始化折叠面板
-                    const colls = document.getElementsByClassName("collapsible");
-                    for (let c of colls) {
-                        c.addEventListener("click", function() {
-                            this.classList.toggle("active");
-                            const content = this.nextElementSibling;
-                            content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
-                        });
-                    }
-                    
-                } catch (error) {
-                    resultDiv.innerHTML = `<div class="error">验证出错：${error.message}</div>`;
-                    console.error(error);
+                    html += '<div class="success">验证成功：该偶数可表示为两个素数之和！</div>';
+                } else {
+                    html += '<div class="error">未找到素数对（可尝试调整周期层数或输入更小的数）</div>';
                 }
-            }, 100);
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">验证出错：${error.message}</div>`;
+                console.error(error);
+            }
+        }
+        
+        // 折叠面板控制函数
+        function toggleCollapse(element) {
+            element.classList.toggle("active");
+            const content = element.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
         }
         
         // 回车触发
